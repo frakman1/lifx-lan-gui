@@ -5,7 +5,7 @@ LIFX LAN GUI Controller using appJar
 
 ### Prerequisites
 
-python3 and pip3 must already be installed
+`git`, `python3` and `pip3` must already be installed.
 
 # Installation Instructions
 ```bash
@@ -23,4 +23,4 @@ $python3 lights.py
 
 # Supported Platforms
 
-Currently tested on both Windows and Mac. It should work on other platforms that appJar/tkinter supports as well but with no guarantees.
+Currently tested on both `Windows` and `Mac`. It should work on other platforms that appJar/tkinter supports as well but with no guarantees.
