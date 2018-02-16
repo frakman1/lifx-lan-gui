@@ -386,7 +386,7 @@ def finder():
             app.hideLabel("f1")
         
         app.setLabel("lbl2", "Found "+str(len(bulbs))+" bulbs")
-        app.setSpinBox("Expected Bulbs", str(len(bulbs)))
+        #app.setSpinBox("Expected Bulbs", str(len(bulbs)))
         del lifxList[:]
         for bulb in bulbs:
             #print(".get_label()",bulb.get_label()) # this gets the actual label
