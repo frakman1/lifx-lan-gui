@@ -1,5 +1,5 @@
 # lifx-lan-gui
-LIFX LAN GUI Controller using appJar 
+LIFX LAN GUI Controller using [appJar](https://github.com/jarvisteach/appJar) 
 
 ![image](https://user-images.githubusercontent.com/5826484/36191726-7e19c35a-112c-11e8-824e-2029b144dc26.png)
 
