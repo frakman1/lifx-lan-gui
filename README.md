@@ -7,11 +7,10 @@ LIFX LAN GUI Controller using [appJar](https://github.com/jarvisteach/appJar)
 
 If you just want to run this app and not faff around with git and python, then go straight to the [releases](https://github.com/frakman1/lifx-lan-gui/releases) page and download the pre-compiled Mac or Windows binaries. 
 
+# Installation Instructions
 ### Prerequisites
 
 `git`, `python3` and `pip3` must already be installed.
-
-# Installation Instructions
 ```bash
 $git clone https://github.com/frakman1/lifx-lan-gui.git
 $cd lifx-lan-gui/
