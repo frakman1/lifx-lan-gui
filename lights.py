@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from appJar import gui
 import os
 import time
@@ -339,12 +341,16 @@ def listChanged():
     app.clearTextArea("Result")
     app.setTextArea("Result", details)
     
-    if "Power: On" in details:
-        #print ("BULB is ON")
-        app.setButtonImage("Light","bulb_on.gif")
-    elif "Power: Off" in details:
-        #print ("BULB is OFF ")
-        app.setButtonImage("Light","bulb_off.gif")
+    try:
+        if "Power: On" in details:
+            #print ("BULB is ON")
+            app.setButtonImage("Light","bulb_on.gif")
+        elif "Power: Off" in details:
+            #print ("BULB is OFF ")
+            app.setButtonImage("Light","bulb_off.gif")
+    except Exception as e:
+        print ("Ignoring error:", str(e))
+    
     app.setButton ( "Light", "Toggle "+selected )    
     app.showButton("Light")
     color = bulb.get_color();#print(color[0],color[1],color[2]); 
@@ -374,7 +380,7 @@ def finder():
         #print("finder().gExpectedBulbs:",gExpectedBulbs)
         lan = lifxlan.LifxLAN(int(gExpectedBulbs) if int(gExpectedBulbs) != 0 else None)
         bulbs = lan.get_lights()
-        print(type(bulbs))
+        #print(type(bulbs))
         #print(bulbs[0].label) 
         if len(bulbs) < 1:
             app.errorBox("Error", "No bulbs found. Please try again.")
@@ -545,16 +551,23 @@ def press(name):
             return
             
         #selected_bulb.set_power(not selected_bulb.get_power(), duration=0, rapid=True)
+        
         if "Power: Off" in details:
             selected_bulb.set_power(65535, duration=0, rapid=False)
-            app.setButtonImage("Light","bulb_on.gif");#print("PowerOn");
+            try:
+                app.setButtonImage("Light","bulb_on.gif");#print("PowerOn");
+            except Exception as e:
+                print ("Ignoring error:", str(e))
             details = details.replace("Power: Off", "Power: On"); 
             app.clearTextArea("Result")
             app.setTextArea("Result", details)
             
         else:
             selected_bulb.set_power(0, duration=0, rapid=False)
-            app.setButtonImage("Light","bulb_off.gif");#print("PowerOff");
+            try:
+                app.setButtonImage("Light","bulb_off.gif");#print("PowerOff");
+            except Exception as e:
+                print ("Ignoring error:", str(e))
             details = details.replace("Power: On", "Power: Off"); #print("details:\n",details)
             app.clearTextArea("Result")
             app.setTextArea("Result", details)
@@ -635,7 +648,13 @@ app.setCheckBoxChangeFunction("Select All", selectAllPressed)
 app.addOptionBox("LIFX Bulbs",bulbList,1,1)
 app.setOptionBoxChangeFunction("LIFX Bulbs", listChanged)
 app.setSticky("n")
-app.addImageButton("Light", press, "bulb_off.gif",2,2)
+try:
+    app.addImageButton("Light", press, "bulb_off.gif",2,2)
+except Exception as e:
+    print ("Ignoring error:", str(e))
+    #app.errorBox("Error", str(e)+"\n\nTry selecting a bulb from the list first.")
+    #return
+
 app.setButton( "Light", "Toggle Selected" )
 #app.setButtonHeight ( "Light", 40 )
 
