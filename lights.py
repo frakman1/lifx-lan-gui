@@ -29,6 +29,7 @@ SCENE2_C = "scene2_c.pkl"
 SCENE2_P = "scene2_p.pkl"
 SCENE3_C = "scene3_c.pkl"
 SCENE3_P = "scene3_p.pkl"
+CYCLES = "Cycles"
 alreadyDone = False
 config = {}
 bulbs = []
@@ -497,7 +498,7 @@ def press(name):
         bulbHSBK = [hsv[0]*65535.0,hsv[1]*65535.0,hsv[2]*65535.0,3500]
         #print (bulbHSBK)
         period = app.getEntry("Period(ms)")
-        cycles = app.getEntry("Cycles      ")
+        cycles = app.getEntry(CYCLES)
         duty_cycle = app.getEntry("Duty Cycle")
         #print("period:",period)
         #print("cycles:",cycles)
@@ -513,7 +514,7 @@ def press(name):
             app.errorBox("Error", "Error. No bulb was selected. Please select a bulb from the pull-down menu (or tick the 'Select All' checkbox) and try again.")
             return        
         
-    elif (name == "Color") :
+    elif (name == "Secondary Color") :
         pickedColor = app.colourBox(colour="#FF0000")
         app.setLabelBg("lblwaveformcolor", pickedColor)
         gwaveformcolor = pickedColor
@@ -758,41 +759,47 @@ app.stopLabelFrame()
 
 app.stopLabelFrame()
 #-------------------------------------------
-app.startLabelFrame("Waveform",1,1,5,2)
-app.setSticky("news")
+app.startLabelFrame("Waveform",1,1,5,1)
+#app.setFrameWidth("Waveform",20)
+#app.setSticky("news")
+app.setSticky("w")
+
 app.addRadioButton("waveform", "Saw")
 app.addRadioButton("waveform", "Sine")
 app.addRadioButton("waveform", "HalfSine")
 app.addRadioButton("waveform", "Triangle")
-app.addRadioButton("waveform", "Pulse")
+app.addRadioButton("waveform", "Pulse (Strobe)")
 
-app.addCheckBox("Transient",0,1)
+app.setSticky("e")
+app.addCheckBox("Transient",0,2)
 app.setCheckBox("Transient")
-app.addButton("Color", press,1,1)
+app.addButton("Secondary Color", press,1,1)
 app.addLabel("lblwaveformcolor","     ",1,2)
 app.setLabelBg("lblwaveformcolor", "#FF0000")
-app.addLabelEntry("Period(ms)",2,1,2,1)
-app.setEntryWidth("Period(ms)",5)
+app.setLabelWidth("lblwaveformcolor",20)
+app.addLabelEntry("Period(ms)",2,2)
+app.setEntryWidth("Period(ms)",6)
 app.setEntry("Period(ms)", "500")
 
-app.addLabelEntry("Cycles      ",3,1,2,1)
-app.setEntryWidth("Cycles      ",5)
-app.setEntry("Cycles      ", "5")
+app.addLabelEntry(CYCLES,3,2)
+app.setEntryWidth(CYCLES,6)
+app.setEntry(CYCLES, "5")
 
-app.addLabelEntry("Duty Cycle",4,1,2,1)
+app.addLabelEntry("Duty Cycle",4,2)
 app.setEntryWidth("Duty Cycle",6)
 app.setEntry("Duty Cycle", "0")
 
 app.setEntryTooltip("Duty Cycle",DUTY_CYCLE_TIP)
 app.setLabelTooltip("Duty Cycle",DUTY_CYCLE_TIP)
-app.setEntryTooltip("Cycles      ",CYCLES_TIP)
-app.setLabelTooltip("Cycles      ",CYCLES_TIP)
+app.setEntryTooltip("Cycles",CYCLES_TIP)
+app.setLabelTooltip(CYCLES,CYCLES_TIP)
 app.setEntryTooltip("Period(ms)",PERIOD_TIP)
 app.setLabelTooltip("Period(ms)",PERIOD_TIP)
 app.setCheckBoxTooltip("Transient",TRANSIENT_TIP)
+app.setSticky("ew")
 
-app.addButton("Execute", press,0,2)
-app.setButtonBg("Execute", "blue")
+app.addButton("Execute", press,5,0,colspan=3)
+app.setButtonBg("Execute", "cyan")
 
 
 app.stopLabelFrame()
@@ -803,9 +810,9 @@ app.stopLabelFrame()
 app.stopLabelFrame()
 
 
-#app.setSticky("sew")
+#app.setSticky("news")
 app.startLabelFrame("Bulb Details",5,0)
-app.setSticky("news")
+app.setSticky("ew")
 app.addScrolledTextArea("Result",0,0)
 #app.setTextAreaWidth("Result", 45)
 app.setTextAreaHeight("Result", 25)
