@@ -27,3 +27,10 @@ $python3 lights.py
 # Supported Platforms
 
 Currently tested on both `Windows` and `Mac`. It should work on other platforms that appJar/tkinter supports as well but with no guarantees.
+
+
+### Packaging notes:
+- Windows:
+`pyinstaller --add-data "*.gif;."  --icon=lifxgui.ico  --onefile -F -w lights.py`
+- Mac:
+`pyinstaller --add-data "*.gif:."  --icon=lifxgui.ico  --onefile -F -c lights.py`
