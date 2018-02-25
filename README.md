@@ -19,6 +19,11 @@ $pip3 install lifxlan
 $pip3 install colour
 $pip3 install configobj
 ```
+*hint: If you get errors installing the above due to some missing dependency, then try downloading its precompiled package from [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/) and pip install its .whl file. e.g.:*<br>
+```bash
+$pip3 install netifaces‑0.10.6‑cp36‑cp36m‑win_amd64.whl
+```
+
 # Run Instructions
 ```bash
 $python3 lights.py
