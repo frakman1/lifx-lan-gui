@@ -14,7 +14,13 @@ from lifxlan import BLUE, CYAN, GREEN, ORANGE, PINK, PURPLE, RED, YELLOW
 from configobj import ConfigObj
 import pickle as pkl
 from random import randint
+from PIL import ImageGrab
+from PIL import Image
+import appJar as aJ
 
+
+
+DECIMATE         = 1   # skip every DECIMATE number of pixels to speed up calculation
 TRANSIENT_TIP = "If selected, return to the original color after the specified number of cycles. If not selected, set light to specified color"
 PERIOD_TIP = "Period is the length of one cycle in milliseconds"
 CYCLES_TIP = "Cycles is the number of times to repeat the waveform"
@@ -41,6 +47,7 @@ gExpectedBulbs = EXPECTED_BULBS
 lifxList = []
 lifxDict = {}
 gwaveformcolor = "#FF0000"
+is_follow = False
 test_string = """
 
 """
@@ -50,6 +57,21 @@ original_colors2 = {}
 original_powers2 = {}
 original_colors3 = {}
 original_powers3 = {}
+
+
+class App(aJ.gui):
+    def __init__(self, *args, **kwargs):
+        aJ.gui.__init__(self, *args, **kwargs)
+
+    def winfo_screenheight(self):
+        #   shortcut to height
+        #   alternatively return self.topLevel.winfo_screenheight() since topLevel is Tk (root) instance!
+        return self.appWindow.winfo_screenheight()
+
+    def winfo_screenwidth(self):
+        #   shortcut to width
+        #   alternatively return self.topLevel.winfo_screenwidth() since topLevel is Tk (root) instance!
+        return self.appWindow.winfo_screenwidth()
 
 
 
@@ -165,7 +187,7 @@ def Scene(name):
                 light.set_power(original_powers3[light])
     except Exception as e:
         print ("Ignoring error: ", str(e))
-        app.errorBox("Error", str(e)+"\n\n Scene Operation failed. This feature is buggy and works 50% of the time. If you keep getting this error, try restarting the app then try again.")
+        app.errorBox("Error", str(e)+"\n\n Scene Operation failed. This feature is buggy and only works about 50% of the time. Sometimes, you can still save and restore a scene despite this error. If you keep getting this error and can not perform a 'Restore', try restarting the app then try again.")
         return        
     
     
@@ -336,6 +358,9 @@ def listChanged():
     except Exception as e:
         print ("Ignoring error: ", str(e))
         app.errorBox("Error", str(e))
+        app.clearTextArea("Result");
+        app.setTextArea("Result", str(e))
+        
         return
                 
     
@@ -480,7 +505,7 @@ def press(name):
             waveform = 2
         elif waveform == "Triangle":
             waveform = 3
-        elif waveform == "Pulse":
+        elif waveform == "Pulse (Strobe)":
             waveform = 4
         #print ("waveform:",waveform)
         is_transient = app.getCheckBox("Transient")
@@ -612,12 +637,93 @@ def rainbow(lan, duration_secs=0.5, smooth=False):
         for color in colors:
             lan.set_color_all_lights(color, transition_time_ms, rapid)
             sleep(duration_secs)
+
+
+def followDesktop():
+    global gSelectAll
+    global lan
+    global is_follow
+    global selected_bulb
+    screen_width = app.winfo_screenwidth()
+    screen_height = app.winfo_screenheight()
+    print("screen_width:",screen_width," screen_height:",screen_height)
+    print("Follow:",is_follow)  
+    mysize = 128, 128
+    while (is_follow):
+     # Clear colour accumulators 
+     red   = 0
+     green = 0
+     blue  = 0
+ 
+     left   = 0      # The x-offset of where your crop box starts
+     top    = 0    # The y-offset of where your crop box starts
+     width  = screen_width   # The width  of crop box
+     height = screen_height    # The height of crop box
+     box    = (left, top, left+width, top+height)
+
+     # take a screenshot
+     image = ImageGrab.grab(bbox=box)
+     image.thumbnail(mysize)
+     #image.show()
+     width, height = image.size
+     for y in range(0, height, DECIMATE):  #loop over the height
+         for x in range(0, width, DECIMATE):  #loop over the width 
+             #print "\n coordinates   x:%d y:%d \n" % (x,y)
+             color = image.getpixel((x, y))  #grab a pixel
+             # calculate sum of each component (RGB)
+             red = red + color[0]
+             green = green + color[1]
+             blue = blue + color[2]
+             #print red + " " +  green + " " + blue
+             #print "\n totals   red:%s green:%s blue:%s\n" % (red,green,blue)
+             #print color
+     #print(time.clock())
+
+     # calculate the averages
+     red = (( red / ( (height/DECIMATE) * (width/DECIMATE) ) ) )/255.0
+     green = ((green / ( (height/DECIMATE) * (width/DECIMATE) ) ) )/255.0
+     blue = ((blue / ( (height/DECIMATE) * (width/DECIMATE) ) ) )/255.0
+
+     # generate a composite colour from these averages
+     c = Color(rgb=(red, green, blue))
+     #print (c)
+
+     #print ("\naverage1  red:%s green:%s blue:%s" % (red,green,blue))
+     #print ("average1   hue:%f saturation:%f luminance:%f" % (c.hue,c.saturation,c.luminance))
+     #print ("average1  (hex) "+  (c.hex))
+ 
+     hsv = rgb_to_hsv(c.red,c.green,c.blue)
+     #print("hsv:",hsv)
+     bulbHSBK = [hsv[0]*65535.0,hsv[1]*65535.0,hsv[2]*65535.0,3500]
+     #print ("bulbHSBK:",bulbHSBK)
+     try:
+         if gSelectAll:
+             lan.set_color_all_lights(bulbHSBK, duration=500, rapid=False)
+         elif selected_bulb:
+             #print("sending color",hsv)
+             selected_bulb.set_color(bulbHSBK, duration=500, rapid=False)
+         else:
+             app.errorBox("Error", "Error. No bulb was selected. Please select a bulb from the pull-down menu (or tick the 'Select All' checkbox) and try again.")
+             app.setCheckBox("Follow Desktop",False)
+             is_follow = False
+             return        
+     except Exception as e:
+         print ("Ignoring error:", str(e))
     
     
+    
+def followDesktopPressed(name):
+    global is_follow
+    is_follow = app.getCheckBox("Follow Desktop")
+    print("Pressed:",name," Follow:",is_follow)  
+    
+    app.thread(followDesktop)    
+              
 
 bulbList = ["-None-          "]
 
-app = gui("LIFX Controller")
+app = App("LIFX Controller")
+#app = gui("LIFX Controller")
 app.setStretch("both")
 app.setResizable(True)
 app.setFont(12)
@@ -802,6 +908,9 @@ app.addButton("Execute", press,5,0,colspan=3)
 app.setButtonBg("Execute", "cyan")
 
 
+
+
+
 app.stopLabelFrame()
 #-------------------------------------------
 
@@ -867,6 +976,18 @@ if os.path.exists(PICKLE):
 #light = Light("12:34:56:78:9a:bc", "192.168.1.42")
 #print("bulbs:",bulbs)
 lan = lifxlan.LifxLAN()
+
+
+#-------------------------------------------
+app.startLabelFrame("Desktop",2,0)
+app.setSticky("w")
+app.addCheckBox("Follow Desktop")
+app.setCheckBoxChangeFunction("Follow Desktop", followDesktopPressed)
+
+
+app.stopLabelFrame()
+#-------------------------------------------
+
 app.go()
 
 app.warn("App Ended")
