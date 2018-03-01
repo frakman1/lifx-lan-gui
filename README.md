@@ -18,6 +18,9 @@ $pip3 install appJar
 $pip3 install lifxlan
 $pip3 install colour
 $pip3 install configobj
+$pip3 install numpy
+$pip3 install opencv-python
+$pip3 install scipy
 ```
 *hint: If you get errors installing the above due to some missing dependency, then try downloading its precompiled package from [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/) and pip install its .whl file. e.g.:*<br>
 ```bash
