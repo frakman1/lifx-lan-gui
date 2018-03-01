@@ -17,6 +17,7 @@ from random import randint
 from PIL import ImageGrab
 from PIL import Image
 import appJar as aJ
+from platform import system
 
 #import matplotlib.pyplot as plt
 import numpy as np
@@ -766,7 +767,11 @@ def followDesktop():
      except Exception as e:
          print ("Ignoring error:", str(e))
     
+    print("Exiting loop")
     
+def iswindows():
+  os = java.lang.System.getProperty( "os.name" )
+  return "win" in os.lower()    
     
 def followDesktopPressed(name):
     global is_follow
@@ -775,16 +780,25 @@ def followDesktopPressed(name):
     app.showEntry("Duration")
     if (is_follow):
         print("Pressed:",name," Follow:",is_follow)  
-        app.infoBox("Select Region", "Drag a rectangle around the region of interest and press ENTER twice. This region's dominant color will be sent to the bulbs to match. To Cancel, press c twice.", parent=None)
         app.setTransparency(0)
+        app.infoBox("Select Region", "A new window entitled \"Screenshot\" will pop up. Drag a rectangle around the region of interest and press ENTER (might have to press it twice). This region's dominant color will be sent to the bulbs to match. To Cancel, press c (maybe twice).", parent=None)
         image = ImageGrab.grab()
-        open_cv_image = np.array(image) 
+        thisOS=iswindows
+        os = system()
+        if (os == 'Linux') or (os == 'Darwin'):
+            print("Mac OS detected.")
+            open_cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        elif (os == 'Windows'):
+            print("Windows OS detected.")
+            open_cv_image = np.array(image) 
+        
         # Convert RGB to BGR 
         im = open_cv_image[:, :, ::-1].copy() 
-        r = cv2.selectROI(im, False)
-        cv2.waitKey()
+        cv2.namedWindow("Screenshot", cv2.WINDOW_FULLSCREEN) 
+        cv2.moveWindow("Screenshot", 0, 0) 
+        r = cv2.selectROI("Screenshot", im, False)
+        #cv2.waitKey()
         print("r is",r)
-        print("type is:",type(r))
         if not any(r):
             print("No region selected. Exiting")
             cv2.destroyAllWindows()
