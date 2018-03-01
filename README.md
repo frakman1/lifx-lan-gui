@@ -1,5 +1,7 @@
 # lifx-lan-gui
-A simple LIFX Desktop app that uses [appJar](https://github.com/jarvisteach/appJar) for the GUI and [lifxlan](https://github.com/mclarkk/lifxlan) for the underlying driver.
+A simple LIFX Desktop (Windows and Mac) app that uses [appJar](https://github.com/jarvisteach/appJar) for the GUI and [lifxlan](https://github.com/mclarkk/lifxlan) for the underlying driver. 
+
+
 
 ![image](https://user-images.githubusercontent.com/5826484/36358189-e43de388-14d7-11e8-99c8-dca0ee02d76d.png)
 
