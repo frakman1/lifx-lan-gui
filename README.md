@@ -1,5 +1,5 @@
 # lifx-lan-gui
-A simple LIFX Desktop (Windows and Mac) app that uses [appJar](https://github.com/jarvisteach/appJar) for the GUI and [lifxlan](https://github.com/mclarkk/lifxlan) for the underlying driver. 
+A simple LIFX Desktop (Windows, Linux and Mac) app that uses [appJar](https://github.com/jarvisteach/appJar) for the GUI and [lifxlan](https://github.com/mclarkk/lifxlan) for the underlying driver. 
 
 
 
@@ -39,7 +39,7 @@ $python3 lights.py
 
 # Supported Platforms
 
-Currently tested on both `Windows` and `Mac`. It should work on other platforms that appJar/tkinter supports as well but with no guarantees.
+Currently tested on `Windows 7 & 10, 64bit`, `Linux (Ubuntu 14.04.1-32bit)` and `Mac (Sierra)`. 
 
 
 ### Packaging notes:
