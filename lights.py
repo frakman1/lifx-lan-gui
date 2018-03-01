@@ -18,15 +18,26 @@ from PIL import ImageGrab
 from PIL import Image
 import appJar as aJ
 
+#import matplotlib.pyplot as plt
+import numpy as np
+#from matplotlib.widgets  import RectangleSelector
+import cv2
+#from mss import mss
+from scipy.stats import itemfreq
 
 
-DECIMATE         = 1   # skip every DECIMATE number of pixels to speed up calculation
+ 
+
+DECIMATE  = 1   # skip every DECIMATE number of pixels to speed up calculation
 TRANSIENT_TIP = "If selected, return to the original color after the specified number of cycles. If not selected, set light to specified color"
 PERIOD_TIP = "Period is the length of one cycle in milliseconds"
 CYCLES_TIP = "Cycles is the number of times to repeat the waveform"
 DUTY_CYCLE_TIP = "Duty Cycle is an integer between -32768 and 32767. Its effect is most obvious with the Pulse waveform. Set Duty Cycle to 0 to spend an equal amount of time on the original color and the new color. Set Duty Cycle to positive to spend more time on the original color. Set Duty Cycle to negative to spend more time on the new color"
 EXPECTED_TIP = "Select 0 to find all available bulbs. Select any number to look for exactly that number of bulbs"
+DURATION_TIP = "The time (in ms) that a color transition takes"
+FOLLOW_DESKTOP_TIP = "Make your bulbs' color match your desktop"
 EXPECTED_BULBS = 2
+DURATION_DEFAULT = 200
 CONFIG = "lights.ini"
 PICKLE = "lifxList.pkl"
 SCENE1_C = "scene1_c.pkl"
@@ -57,7 +68,7 @@ original_colors2 = {}
 original_powers2 = {}
 original_colors3 = {}
 original_powers3 = {}
-
+r = None
 
 class App(aJ.gui):
     def __init__(self, *args, **kwargs):
@@ -418,6 +429,7 @@ def finder():
             app.hideLabel("f1")
         
         app.setLabel("lbl2", "Found "+str(len(bulbs))+" bulbs")
+        app.setCheckBox("Select All")
         #app.setSpinBox("Expected Bulbs", str(len(bulbs)))
         del lifxList[:]
         for bulb in bulbs:
@@ -644,27 +656,65 @@ def followDesktop():
     global lan
     global is_follow
     global selected_bulb
+    global r
     screen_width = app.winfo_screenwidth()
     screen_height = app.winfo_screenheight()
     print("screen_width:",screen_width," screen_height:",screen_height)
     print("Follow:",is_follow)  
     mysize = 128, 128
+    duration = app.getEntry("Duration")
+    print("r:",r)
+    print("Starting Loop")
+    
     while (is_follow):
+     #input("Press Enter to continue...")
+     app.hideEntry("Duration")
      # Clear colour accumulators 
      red   = 0
      green = 0
      blue  = 0
  
-     left   = 0      # The x-offset of where your crop box starts
-     top    = 0    # The y-offset of where your crop box starts
-     width  = screen_width   # The width  of crop box
-     height = screen_height    # The height of crop box
+     left   = r[0]      # The x-offset of where your crop box starts
+     top    = r[1]    # The y-offset of where your crop box starts
+     width  = r[2]   # The width  of crop box
+     height = r[3]    # The height of crop box
      box    = (left, top, left+width, top+height)
 
      # take a screenshot
      image = ImageGrab.grab(bbox=box)
-     image.thumbnail(mysize)
      #image.show()
+     #image.thumbnail(mysize)
+     #image.show()
+     #with mss() as sct:
+     #   monitor = {'top': top, 'left': left, 'width': width, 'height': height}
+     #   im = sct.grab(monitor)
+     #   img = cv2.imread(im)
+        
+     #printscreen_numpy = np.array(image.getdata(),dtype='uint8').reshape((image.size[1],image.size[0],3)) 
+     img = np.array(image.convert('RGB'))
+     #cv2.imshow("window",printscreen_numpy)
+     #cv2.waitKey(0)
+     #img = cv2.imread(im)
+     #start = time.clock()
+     
+     #average_color = [img[:, :, i].mean() for i in range(img.shape[-1])]
+     
+     arr = np.float32(img)
+     pixels = arr.reshape((-1, 3))
+     n_colors = 1
+     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, .1)
+     flags = cv2.KMEANS_RANDOM_CENTERS
+     _, labels, centroids = cv2.kmeans(pixels, n_colors, None, criteria, 10, flags)
+     palette = np.uint8(centroids)
+     quantized = palette[labels.flatten()]
+     quantized = quantized.reshape(img.shape)
+     dominant_color = palette[np.argmax(itemfreq(labels)[:, -1])]
+     #print ("time1:",time.clock() - start)
+     #print ("average_color: ",average_color)
+     #print("dominant_color: ",dominant_color)
+     
+     '''
+     #start = time.clock()
      width, height = image.size
      for y in range(0, height, DECIMATE):  #loop over the height
          for x in range(0, width, DECIMATE):  #loop over the width 
@@ -687,21 +737,27 @@ def followDesktop():
      # generate a composite colour from these averages
      c = Color(rgb=(red, green, blue))
      #print (c)
-
+     print("c.red:",c.red," c.green:",c.green," c.blue:",c.blue)
+     #print ("time2: ",time.clock() - start)
      #print ("\naverage1  red:%s green:%s blue:%s" % (red,green,blue))
      #print ("average1   hue:%f saturation:%f luminance:%f" % (c.hue,c.saturation,c.luminance))
      #print ("average1  (hex) "+  (c.hex))
- 
-     hsv = rgb_to_hsv(c.red,c.green,c.blue)
+    
+     #hsv = rgb_to_hsv(c.red,c.green,c.blue)
+     '''
+     #hsv = rgb_to_hsv(average_color[0]/255.0, average_color[1]/255.0, average_color[2]/255.0)
+     hsv = rgb_to_hsv(dominant_color[0]/255.0, dominant_color[1]/255.0, dominant_color[2]/255.0)
+     
      #print("hsv:",hsv)
      bulbHSBK = [hsv[0]*65535.0,hsv[1]*65535.0,hsv[2]*65535.0,3500]
      #print ("bulbHSBK:",bulbHSBK)
+     #exit(0)
      try:
          if gSelectAll:
-             lan.set_color_all_lights(bulbHSBK, duration=500, rapid=False)
+             lan.set_color_all_lights(bulbHSBK, duration=duration, rapid=True)
          elif selected_bulb:
              #print("sending color",hsv)
-             selected_bulb.set_color(bulbHSBK, duration=500, rapid=False)
+             selected_bulb.set_color(bulbHSBK, duration=duration, rapid=True)
          else:
              app.errorBox("Error", "Error. No bulb was selected. Please select a bulb from the pull-down menu (or tick the 'Select All' checkbox) and try again.")
              app.setCheckBox("Follow Desktop",False)
@@ -714,11 +770,33 @@ def followDesktop():
     
 def followDesktopPressed(name):
     global is_follow
+    global r
     is_follow = app.getCheckBox("Follow Desktop")
-    print("Pressed:",name," Follow:",is_follow)  
-    
-    app.thread(followDesktop)    
-              
+    app.showEntry("Duration")
+    if (is_follow):
+        print("Pressed:",name," Follow:",is_follow)  
+        app.infoBox("Select Region", "Drag a rectangle around the region of interest and press ENTER twice. This region's dominant color will be sent to the bulbs to match. To Cancel, press c twice.", parent=None)
+        app.setTransparency(0)
+        image = ImageGrab.grab()
+        open_cv_image = np.array(image) 
+        # Convert RGB to BGR 
+        im = open_cv_image[:, :, ::-1].copy() 
+        r = cv2.selectROI(im, False)
+        cv2.waitKey()
+        print("r is",r)
+        print("type is:",type(r))
+        if not any(r):
+            print("No region selected. Exiting")
+            cv2.destroyAllWindows()
+            app.setCheckBox("Follow Desktop",False)
+            is_follow = False
+            app.setTransparency(1)
+            return
+        #cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        app.setTransparency(1)
+        app.thread(followDesktop)    
+
 
 bulbList = ["-None-          "]
 
@@ -751,6 +829,7 @@ app.addLabel("lbl2"," ",1,0)
 app.setLabelBg("lbl2","white")
 app.addNamedCheckBox("Select All Bulbs","Select All",1,2)
 app.setCheckBoxChangeFunction("Select All", selectAllPressed)
+
 
 app.addOptionBox("LIFX Bulbs",bulbList,1,1)
 app.setOptionBoxChangeFunction("LIFX Bulbs", listChanged)
@@ -971,6 +1050,7 @@ if os.path.exists(PICKLE):
         app.setLabelBg("lbl2","green")
         app.hideLabel("f1")
         app.setLabel("lbl2", "Recalled "+str(len(bulbs))+" bulbs")        
+        app.setCheckBox("Select All")
     
             
 #light = Light("12:34:56:78:9a:bc", "192.168.1.42")
@@ -983,14 +1063,16 @@ app.startLabelFrame("Desktop",2,0)
 app.setSticky("w")
 app.addCheckBox("Follow Desktop")
 app.setCheckBoxChangeFunction("Follow Desktop", followDesktopPressed)
-
-
+app.addLabelEntry("Duration")
+app.setEntryWidth("Duration",6)
+app.setEntry("Duration",DURATION_DEFAULT)
+app.setEntryTooltip("Duration",DURATION_TIP)
+app.setLabelTooltip("Duration",DURATION_TIP)
+app.setCheckBoxTooltip("Follow Desktop",FOLLOW_DESKTOP_TIP)
 app.stopLabelFrame()
+
 #-------------------------------------------
 
+
+
 app.go()
-
-app.warn("App Ended")
-
-
-
