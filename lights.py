@@ -14,17 +14,18 @@ from lifxlan import BLUE, CYAN, GREEN, ORANGE, PINK, PURPLE, RED, YELLOW
 from configobj import ConfigObj
 import pickle as pkl
 from random import randint
-from PIL import ImageGrab
+from platform import system
 from PIL import Image
 import appJar as aJ
-from platform import system
-
-#import matplotlib.pyplot as plt
 import numpy as np
-#from matplotlib.widgets  import RectangleSelector
 import cv2
-#from mss import mss
 from scipy.stats import itemfreq
+
+myos = system()
+if (myos == 'Windows') or (myos == 'Darwin'):
+    from PIL import ImageGrab
+elif (myos == 'Linux'):
+    import pyscreenshot as ImageGrab
 
 
  
@@ -782,13 +783,12 @@ def followDesktopPressed(name):
         print("Pressed:",name," Follow:",is_follow)  
         app.setTransparency(0)
         app.infoBox("Select Region", "A new window entitled \"Screenshot\" will pop up. Drag a rectangle around the region of interest and press ENTER (might have to press it twice). This region's dominant color will be sent to the bulbs to match. To Cancel, press c (maybe twice).", parent=None)
+        myos = system()
         image = ImageGrab.grab()
-        thisOS=iswindows
-        os = system()
-        if (os == 'Linux') or (os == 'Darwin'):
+        if (myos == 'Linux') or (myos == 'Darwin'):
             print("Mac OS detected.")
             open_cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-        elif (os == 'Windows'):
+        elif (myos == 'Windows'):
             print("Windows OS detected.")
             open_cv_image = np.array(image) 
         
