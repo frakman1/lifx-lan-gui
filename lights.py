@@ -687,7 +687,7 @@ def followDesktop():
      # calculate average R, G, and B values
      #start = time.clock()
      pixels = np.array(image.convert('RGB'), dtype=np.float32)
-     dominant_color = [np.mean(pixels[:,:,:1]), np.mean(pixels[:,:,:2]), np.mean(pixels[:,:,:3])]
+     dominant_color = [np.mean(pixels[:,:,:1]), np.mean(pixels[:,:,1:2]), np.mean(pixels[:,:,2:3])]
      #print ("time1:",time.clock() - start)
      #print("dominant color in RGB: ", dominant_color)
 
@@ -713,7 +713,7 @@ def followDesktop():
      # wait to avoid spamming the lights and causing jitters
      base_delay = 0.002 # wait at least this long for the light firmware
      time.sleep(base_delay + duration_secs) # add additional time for transition
-     print("Exiting loop")
+     #print("Exiting loop")
 
 def iswindows():
   os = java.lang.System.getProperty( "os.name" )
