@@ -682,8 +682,11 @@ def followDesktop():
      height = r[3]    # The height of crop box
      box    = (left, top, left+width, top+height)
 
+     try:
      # take a screenshot
-     image = ImageGrab.grab(bbox=box)
+        image = ImageGrab.grab(bbox=box)
+     except Exception as e:
+        print ("Ignoring error:", str(e))
      #image.show()
      #image.thumbnail(mysize)
      #image.show()
