@@ -36,10 +36,10 @@ PERIOD_TIP = "Period is the length of one cycle in milliseconds"
 CYCLES_TIP = "Cycles is the number of times to repeat the waveform"
 DUTY_CYCLE_TIP = "Duty Cycle is an integer between -32768 and 32767. Its effect is most obvious with the Pulse waveform. Set Duty Cycle to 0 to spend an equal amount of time on the original color and the new color. Set Duty Cycle to positive to spend more time on the original color. Set Duty Cycle to negative to spend more time on the new color"
 EXPECTED_TIP = "Select 0 to find all available bulbs. Select any number to look for exactly that number of bulbs"
-DURATION_TIP = "The time (in ms) that a color transition takes"
+TRANSITION_TIME_TIP = "The time (in ms) that a color transition takes"
 FOLLOW_DESKTOP_TIP = "Make your bulbs' color match your desktop"
 EXPECTED_BULBS = 2
-DURATION_DEFAULT = 200
+TRANSITION_TIME_DEFAULT = 200
 CONFIG = "lights.ini"
 PICKLE = "lifxList.pkl"
 SCENE1_C = "scene1_c.pkl"
@@ -49,6 +49,7 @@ SCENE2_P = "scene2_p.pkl"
 SCENE3_C = "scene3_c.pkl"
 SCENE3_P = "scene3_p.pkl"
 CYCLES = "Cycles"
+TRANSITION_TIME = "Transition Time"
 alreadyDone = False
 config = {}
 bulbs = []
@@ -664,13 +665,13 @@ def followDesktop():
     print("screen_width:", screen_width, " screen_height:", screen_height)
     print("Follow:", is_follow)
     mysize = 128, 128
-    duration = app.getEntry("Duration")
+    duration = app.getEntry(TRANSITION_TIME)
     print("r:", r)
     print("Starting Loop")
 
     while (is_follow):
         #input("Press Enter to continue...")
-        app.hideEntry("Duration")
+        app.hideEntry(TRANSITION_TIME)
         # Clear colour accumulators
         red = 0
         green = 0
@@ -749,7 +750,7 @@ def followDesktopPressed(name):
     global is_follow
     global r
     is_follow = app.getCheckBox("Follow Desktop")
-    app.showEntry("Duration")
+    app.showEntry(TRANSITION_TIME)
     if (is_follow):
         print("Pressed:", name, " Follow:", is_follow)
         app.setTransparency(0)
@@ -1056,11 +1057,11 @@ app.startLabelFrame("Desktop", 2, 0)
 app.setSticky("w")
 app.addCheckBox("Follow Desktop")
 app.setCheckBoxChangeFunction("Follow Desktop", followDesktopPressed)
-app.addLabelEntry("Duration")
-app.setEntryWidth("Duration", 6)
-app.setEntry("Duration", DURATION_DEFAULT)
-app.setEntryTooltip("Duration", DURATION_TIP)
-app.setLabelTooltip("Duration", DURATION_TIP)
+app.addLabelEntry(TRANSITION_TIME)
+app.setEntryWidth(TRANSITION_TIME, 6)
+app.setEntry(TRANSITION_TIME, TRANSITION_TIME_DEFAULT)
+app.setEntryTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
+app.setLabelTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
 app.setCheckBoxTooltip("Follow Desktop", FOLLOW_DESKTOP_TIP)
 app.stopLabelFrame()
 
