@@ -38,6 +38,7 @@ DUTY_CYCLE_TIP = "Duty Cycle is an integer between -32768 and 32767. Its effect 
 EXPECTED_TIP = "Select 0 to find all available bulbs. Select any number to look for exactly that number of bulbs"
 TRANSITION_TIME_TIP = "The time (in ms) that a color transition takes"
 FOLLOW_DESKTOP_TIP = "Make your bulbs' color match your desktop"
+DESKTOP_MODE_TIP = "Select between following the whole desktop screen or just a small portion of it (useful for letterbox movies)"
 EXPECTED_BULBS = 2
 TRANSITION_TIME_DEFAULT = 200
 CONFIG = "lights.ini"
@@ -49,7 +50,9 @@ SCENE2_P = "scene2_p.pkl"
 SCENE3_C = "scene3_c.pkl"
 SCENE3_P = "scene3_p.pkl"
 CYCLES = "Cycles"
-TRANSITION_TIME = "Transition Time"
+TRANSITION_TIME = "Transition Time(ms)"
+DESKTOP_MODE = "Desktop Mode"
+REGION_COLOR = "regioncolor"
 alreadyDone = False
 config = {}
 bulbs = []
@@ -72,6 +75,7 @@ original_powers2 = {}
 original_colors3 = {}
 original_powers3 = {}
 r = None
+selectedMode = "Whole Screen"
 
 class App(aJ.gui):
     def __init__(self, *args, **kwargs):
@@ -351,10 +355,13 @@ def hsv_to_rgb(h, s, v):
 
     return r, g, b
 
+def modeChanged():
+    global selectedMode
+    selectedMode = (app.getOptionBox("Desktop Mode"))#;print("selectedMode: ",selectedMode)
 
 def listChanged():
-    app.clearTextArea("Result");
-    app.setTextArea("Result", "Loading bulb details")
+    app.clearTextArea("Result");  # TODO. Put this in another thread 
+    app.setTextArea("Result", "Loading bulb details")  # TODO. Put this in another thread 
     selected = (app.getOptionBox("LIFX Bulbs"))#;print("selected: ",selected)
     global bulbs
     global selected_bulb
@@ -672,11 +679,9 @@ def followDesktop():
     while (is_follow):
         #input("Press Enter to continue...")
         app.hideEntry(TRANSITION_TIME)
-        # Clear colour accumulators
-        red = 0
-        green = 0
-        blue = 0
-
+        app.hideOptionBox(DESKTOP_MODE)
+        app.showLabel(REGION_COLOR)
+        
         left = r[0]      # The x-offset of where your crop box starts
         top = r[1]    # The y-offset of where your crop box starts
         width = r[2]   # The width  of crop box
@@ -689,7 +694,7 @@ def followDesktop():
         except Exception as e:
             print ("Ignoring error:", str(e))
         #image.show()
-        #image.thumbnail(mysize)
+        image.thumbnail(mysize)
         #image.show()
         #with mss() as sct:
         #   monitor = {'top': top, 'left': left, 'width': width, 'height': height}
@@ -725,7 +730,13 @@ def followDesktop():
         #print("hsv:",hsv)
         bulbHSBK = [hsv[0] * 65535.0,hsv[1] * 65535.0,hsv[2] * 65535.0,3500]
         #print ("bulbHSBK:",bulbHSBK)
-        #exit(0)
+
+
+        rgb1 = hsv_to_rgb(hsv[0], hsv[1], hsv[2]);#print("rgb1:",rgb1)
+        c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
+        #print("c:",c)
+        app.setLabelBg(REGION_COLOR, c.hex_l)
+        
         try:
             if gSelectAll:
                 lan.set_color_all_lights(bulbHSBK, duration=duration, rapid=True)
@@ -742,53 +753,63 @@ def followDesktop():
 
     print("Exiting loop")
 
-def iswindows():
-    os = java.lang.System.getProperty( "os.name" )
-    return "win" in os.lower()
-
 def followDesktopPressed(name):
     global is_follow
     global r
+    global selectedMode
     is_follow = app.getCheckBox("Follow Desktop")
     app.showEntry(TRANSITION_TIME)
+    app.showOptionBox(DESKTOP_MODE)
+    app.hideLabel(REGION_COLOR)
+    
     if (is_follow):
         print("Pressed:", name, " Follow:", is_follow)
-        app.setTransparency(0)
-        app.infoBox("Select Region", "A new window entitled \"Screenshot\" will pop up. Drag a rectangle around the region of interest and press ENTER (might have to press it twice). This region's dominant color will be sent to the bulbs to match. To Cancel, press c (maybe twice).", parent=None)
-        myos = system()
-        image = ImageGrab.grab()
-        if (myos == 'Linux') or (myos == 'Darwin'):
-            print("Mac OS detected.")
-            open_cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-        elif (myos == 'Windows'):
-            print("Windows OS detected.")
-            open_cv_image = np.array(image)
-
-        # Convert RGB to BGR
-        im = open_cv_image[:,:,::-1].copy()
-
-        if (myos == 'Linux') or (myos == 'Darwin'):
+        if (selectedMode == "Whole Screen"):
+            print("Doing Whole Screen processing")
             screen_width = app.winfo_screenwidth()
             screen_height = app.winfo_screenheight()
-            im = cv2.resize(im, (int(screen_width*0.9), int(screen_height*0.9)))
-            cv2.namedWindow("Screenshot", cv2.WINDOW_AUTOSIZE)
-            cv2.imshow("Screenshot", im)
-        elif (myos == 'Windows'):
-            cv2.namedWindow("Screenshot", cv2.WINDOW_NORMAL)
+            r = (0, 0, screen_width, screen_height) 
+        else:
+            print("Doing Partial Screen processing")
+            
+            app.setTransparency(0)
+            app.infoBox("Select Region", "A new window entitled \"Screenshot\" will pop up. Drag a rectangle around the region of interest and press ENTER . This region's dominant color will be sent to the bulbs to match. To Cancel, press c .", parent=None)
+            myos = system()
+            image = ImageGrab.grab()
+            if (myos == 'Linux') or (myos == 'Darwin'):
+                print("Mac OS detected.")
+                open_cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+            elif (myos == 'Windows'):
+                print("Windows OS detected.")
+                open_cv_image = np.array(image)
 
-        r = cv2.selectROI("Screenshot", im, False)
-        #cv2.waitKey()
-        print("r is", r)
-        if not any(r):
-            print("No region selected. Exiting")
+            # Convert RGB to BGR
+            im = open_cv_image[:,:,::-1].copy()
+
+            if (myos == 'Linux') or (myos == 'Darwin'):
+                screen_width = app.winfo_screenwidth()
+                screen_height = app.winfo_screenheight()
+                im = cv2.resize(im, (int(screen_width*0.9), int(screen_height*0.9)))
+                cv2.namedWindow("Screenshot", cv2.WINDOW_AUTOSIZE)
+                cv2.imshow("Screenshot", im)
+            elif (myos == 'Windows'):
+                cv2.namedWindow("Screenshot", cv2.WINDOW_NORMAL)
+
+            r = cv2.selectROI("Screenshot", im, False)
+            #cv2.waitKey()
+            print ("r type:",type(r))
+            print("r is", r)
+            if not any(r):
+                print("No region selected. Exiting")
+                cv2.destroyAllWindows()
+                app.setCheckBox("Follow Desktop", False)
+                is_follow = False
+                app.setTransparency(1)
+                return
+            #cv2.waitKey(0)
             cv2.destroyAllWindows()
-            app.setCheckBox("Follow Desktop", False)
-            is_follow = False
             app.setTransparency(1)
-            return
-        #cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        app.setTransparency(1)
+        
         app.thread(followDesktop)
 
 
@@ -1053,16 +1074,35 @@ lan = lifxlan.LifxLAN()
 
 
 #-------------------------------------------
-app.startLabelFrame("Desktop", 2, 0)
-app.setSticky("w")
-app.addCheckBox("Follow Desktop")
+app.startLabelFrame("Follow Desktop", 2, 0)
+#app.setSticky("n")
+modeList = ["-Select Region-      "]
+modeList.append("Whole Screen")
+modeList.append("Rectangular Region")
+app.addOptionBox(DESKTOP_MODE, modeList,0,1)
+app.setOptionBoxChangeFunction(DESKTOP_MODE, modeChanged)
+app.setOptionBox(DESKTOP_MODE, "Whole Screen", callFunction=False)
+app.addCheckBox("Follow Desktop",0,0)
 app.setCheckBoxChangeFunction("Follow Desktop", followDesktopPressed)
-app.addLabelEntry(TRANSITION_TIME)
+app.addLabelEntry(TRANSITION_TIME,0,2)
 app.setEntryWidth(TRANSITION_TIME, 6)
 app.setEntry(TRANSITION_TIME, TRANSITION_TIME_DEFAULT)
+#app.startLabelFrame("Region Color", 0, 3)
+app.setSticky("ew")
+app.addLabel(REGION_COLOR, "",1,0,3)
+app.setLabel(REGION_COLOR, " Desktop Region's Dominant Color")
+app.setLabelHeight(REGION_COLOR, 1)
+#app.setLabelWidth(REGION_COLOR, 5)
+app.setLabelBg(REGION_COLOR, "gray")
+app.hideLabel(REGION_COLOR)
+#app.stopLabelFrame()
+
+
 app.setEntryTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
 app.setLabelTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
 app.setCheckBoxTooltip("Follow Desktop", FOLLOW_DESKTOP_TIP)
+app.setOptionBoxTooltip(DESKTOP_MODE, DESKTOP_MODE_TIP)
+
 app.stopLabelFrame()
 
 #-------------------------------------------
