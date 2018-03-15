@@ -670,8 +670,8 @@ def followDesktop():
     screen_width = app.winfo_screenwidth()
     screen_height = app.winfo_screenheight()
     print("screen_width:", screen_width, " screen_height:", screen_height)
-    print("Follow:", is_follow)
-    mysize = 128, 128
+    #print("Follow:", is_follow)
+    mysize = max(screen_width, screen_height)*0.1, max(screen_width, screen_height)*0.1 
     duration = app.getEntry(TRANSITION_TIME)
     print("r:", r)
     print("Starting Loop")
