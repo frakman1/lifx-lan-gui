@@ -2,8 +2,7 @@
 A simple LIFX Desktop (Windows, Linux and Mac) app that uses [appJar](https://github.com/jarvisteach/appJar) for the GUI and [lifxlan](https://github.com/mclarkk/lifxlan) for the underlying driver. 
 
 
-
-![image](https://user-images.githubusercontent.com/5826484/36358189-e43de388-14d7-11e8-99c8-dca0ee02d76d.png)
+![image](https://user-images.githubusercontent.com/5826484/37431281-310a6868-27ab-11e8-85a2-6259068ed837.png)
 
 # Pre-Compiled Binaries
 
