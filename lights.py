@@ -360,8 +360,8 @@ def modeChanged():
     selectedMode = (app.getOptionBox("Desktop Mode"))#;print("selectedMode: ",selectedMode)
 
 def listChanged():
-    app.clearTextArea("Result");  # TODO. Put this in another thread 
-    app.setTextArea("Result", "Loading bulb details")  # TODO. Put this in another thread 
+    app.clearTextArea("Result");  # TODO. Put this in another thread
+    app.setTextArea("Result", "Loading bulb details")  # TODO. Put this in another thread
     selected = (app.getOptionBox("LIFX Bulbs"))#;print("selected: ",selected)
     global bulbs
     global selected_bulb
@@ -671,7 +671,7 @@ def followDesktop():
     screen_height = app.winfo_screenheight()
     print("screen_width:", screen_width, " screen_height:", screen_height)
     #print("Follow:", is_follow)
-    mysize = max(screen_width, screen_height)*0.1, max(screen_width, screen_height)*0.1 
+    mysize = max(screen_width, screen_height) * 0.1, max(screen_width, screen_height) * 0.1
     duration = app.getEntry(TRANSITION_TIME)
     print("r:", r)
     print("Starting Loop")
@@ -681,7 +681,7 @@ def followDesktop():
         app.hideEntry(TRANSITION_TIME)
         app.hideOptionBox(DESKTOP_MODE)
         app.showLabel(REGION_COLOR)
-        
+
         left = r[0]      # The x-offset of where your crop box starts
         top = r[1]    # The y-offset of where your crop box starts
         width = r[2]   # The width  of crop box
@@ -736,7 +736,7 @@ def followDesktop():
         c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
         #print("c:",c)
         app.setLabelBg(REGION_COLOR, c.hex_l)
-        
+
         try:
             if gSelectAll:
                 lan.set_color_all_lights(bulbHSBK, duration=duration, rapid=True)
@@ -761,17 +761,17 @@ def followDesktopPressed(name):
     app.showEntry(TRANSITION_TIME)
     app.showOptionBox(DESKTOP_MODE)
     app.hideLabel(REGION_COLOR)
-    
+
     if (is_follow):
         print("Pressed:", name, " Follow:", is_follow)
         if (selectedMode == "Whole Screen"):
             print("Doing Whole Screen processing")
             screen_width = app.winfo_screenwidth()
             screen_height = app.winfo_screenheight()
-            r = (0, 0, screen_width, screen_height) 
+            r = (0, 0, screen_width, screen_height)
         else:
             print("Doing Partial Screen processing")
-            
+
             app.setTransparency(0)
             app.infoBox("Select Region", "A new window entitled \"Screenshot\" will pop up. Drag a rectangle around the region of interest and press ENTER . This region's dominant color will be sent to the bulbs to match. To Cancel, press c .", parent=None)
             myos = system()
@@ -789,7 +789,7 @@ def followDesktopPressed(name):
             if (myos == 'Linux') or (myos == 'Darwin'):
                 screen_width = app.winfo_screenwidth()
                 screen_height = app.winfo_screenheight()
-                im = cv2.resize(im, (int(screen_width*0.9), int(screen_height*0.9)))
+                im = cv2.resize(im, (int(screen_width * 0.9), int(screen_height * 0.9)))
                 cv2.namedWindow("Screenshot", cv2.WINDOW_AUTOSIZE)
                 cv2.moveWindow("Screenshot", 0, 0)
                 cv2.imshow("Screenshot", im)
@@ -798,7 +798,7 @@ def followDesktopPressed(name):
 
             r = cv2.selectROI("Screenshot", im, False)
             #cv2.waitKey()
-            print ("r type:",type(r))
+            print ("r type:", type(r))
             print("r is", r)
             if not any(r):
                 print("No region selected. Exiting")
@@ -810,7 +810,7 @@ def followDesktopPressed(name):
             #cv2.waitKey(0)
             cv2.destroyAllWindows()
             app.setTransparency(1)
-        
+
         app.thread(followDesktop)
 
 
@@ -1080,17 +1080,17 @@ app.startLabelFrame("Follow Desktop", 2, 0)
 modeList = ["-Select Region-      "]
 modeList.append("Whole Screen")
 modeList.append("Rectangular Region")
-app.addOptionBox(DESKTOP_MODE, modeList,0,1)
+app.addOptionBox(DESKTOP_MODE, modeList, 0, 1)
 app.setOptionBoxChangeFunction(DESKTOP_MODE, modeChanged)
 app.setOptionBox(DESKTOP_MODE, "Whole Screen", callFunction=False)
-app.addCheckBox("Follow Desktop",0,0)
+app.addCheckBox("Follow Desktop", 0, 0)
 app.setCheckBoxChangeFunction("Follow Desktop", followDesktopPressed)
-app.addLabelEntry(TRANSITION_TIME,0,2)
+app.addLabelEntry(TRANSITION_TIME, 0, 2)
 app.setEntryWidth(TRANSITION_TIME, 6)
 app.setEntry(TRANSITION_TIME, TRANSITION_TIME_DEFAULT)
 #app.startLabelFrame("Region Color", 0, 3)
 app.setSticky("ew")
-app.addLabel(REGION_COLOR, "",1,0,3)
+app.addLabel(REGION_COLOR, "", 1, 0, 3)
 app.setLabel(REGION_COLOR, " Desktop Region's Dominant Color")
 app.setLabelHeight(REGION_COLOR, 1)
 #app.setLabelWidth(REGION_COLOR, 5)
