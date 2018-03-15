@@ -791,6 +791,7 @@ def followDesktopPressed(name):
                 screen_height = app.winfo_screenheight()
                 im = cv2.resize(im, (int(screen_width*0.9), int(screen_height*0.9)))
                 cv2.namedWindow("Screenshot", cv2.WINDOW_AUTOSIZE)
+                cv2.moveWindow("Screenshot", 0, 0)
                 cv2.imshow("Screenshot", im)
             elif (myos == 'Windows'):
                 cv2.namedWindow("Screenshot", cv2.WINDOW_NORMAL)
