@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+import sys
+if sys.version_info < (3, 3):
+    sys.stdout.write("Sorry, This module requires Python 3.3 (or higher), not Python 2.x. You are using Python {0}.{1}\n".format(sys.version_info[0],sys.version_info[1]))
+    sys.exit(1)
+    
 from appJar import gui
 import os
 import time
@@ -728,7 +733,7 @@ def followDesktop():
         hsv = rgb_to_hsv(dominant_color[0] / 255.0, dominant_color[1] / 255.0, dominant_color[2] / 255.0)
 
         #print("hsv:",hsv)
-        bulbHSBK = [hsv[0] * 65535.0,hsv[1] * 65535.0,hsv[2] * 65535.0,3500]
+        bulbHSBK = [hsv[0] * 65535.0, (hsv[1] * 65535.0), hsv[2] * 65535.0,3500]
         #print ("bulbHSBK:",bulbHSBK)
 
 
