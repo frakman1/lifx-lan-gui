@@ -32,7 +32,10 @@ if (myos == 'Windows') or (myos == 'Darwin'):
 elif (myos == 'Linux'):
     import pyscreenshot as ImageGrab
 
-
+if (myos == 'Windows'):
+    mygreen = 'lime'
+elif (myos == 'Darwin') or (myos == 'Linux') :
+    mygreen = 'green'
 
 
 DECIMATE = 1   # skip every DECIMATE number of pixels to speed up calculation
@@ -446,7 +449,7 @@ def finder():
             app.setLabel("lbl2", "Found 0 bulbs")
             return
         else:
-            app.setLabelBg("lbl2", "lime")
+            app.setLabelBg("lbl2", mygreen)
             app.hideLabel("f1")
 
         app.setLabel("lbl2", "Found " + str(len(bulbs)) + " bulbs")
@@ -1164,7 +1167,7 @@ if os.path.exists(PICKLE):
     if len(bulbs) > 0:
         app.clearOptionBox("LIFX Bulbs", callFunction=False)
         app.changeOptionBox("LIFX Bulbs", bulbList, callFunction=False)
-        app.setLabelBg("lbl2", "lime")
+        app.setLabelBg("lbl2", mygreen)
         app.hideLabel("f1")
         app.setLabel("lbl2", "Recalled " + str(len(bulbs)) + " bulbs")
         app.setCheckBox("Select All")
