@@ -56,8 +56,12 @@ SCENE3_C = "scene3_c.pkl"
 SCENE3_P = "scene3_p.pkl"
 CYCLES = "Cycles"
 TRANSITION_TIME = "Transition Time(ms)"
+FOLLOW_DESKTOP = "Follow Desktop"
 DESKTOP_MODE = "Desktop Mode"
 REGION_COLOR = "regioncolor"
+MAX_SATURATION = "Max Saturation"
+MAX_BRIGHTNESS = "Max Brightness"
+
 alreadyDone = False
 config = {}
 bulbs = []
@@ -81,6 +85,8 @@ original_colors3 = {}
 original_powers3 = {}
 r = None
 selectedMode = "Whole Screen"
+maxSaturation = False
+maxBrightness = False
 
 class App(aJ.gui):
     def __init__(self, *args, **kwargs):
@@ -99,7 +105,7 @@ class App(aJ.gui):
 
 
 def SceneNameChanged(name):
-    print(name, "Entry changed")
+    #print(name, "Entry changed")
     config[name] = app.getEntry(name)
     config.write()
 
@@ -435,7 +441,7 @@ def finder():
         #print(type(bulbs))
         #print(bulbs[0].label)
         if len(bulbs) < 1:
-            app.errorBox("Error", "No bulbs found. Please try again.")
+            app.errorBox("Error", "No bulbs found. Please try again. If you switched WiFi networks, please re-start the app and try again.")
             app.setLabelBg("lbl2", "red")
             app.setLabel("lbl2", "Found 0 bulbs")
             return
@@ -524,6 +530,7 @@ def press(name):
 
     elif (name == "Execute"):
         waveform = app.getRadioButton("waveform")
+        config['waveform'] = waveform
         if waveform == "Saw":
             waveform = 0
         elif waveform == "Sine":
@@ -536,6 +543,8 @@ def press(name):
             waveform = 4
         #print ("waveform:",waveform)
         is_transient = app.getCheckBox("Transient")
+        config['transient'] = is_transient
+        
         if (is_transient):
             is_transient = 1
         else:
@@ -543,7 +552,8 @@ def press(name):
 
         #print("is_transient:",is_transient)
         #pickedColor = app.getLabelBg("lblwaveformcolor")
-
+        #print("gwaveformcolor:",gwaveformcolor)
+        config['secondary_color'] = gwaveformcolor
         c = Color(str(gwaveformcolor))
         hsv = rgb_to_hsv(c.red, c.green, c.blue)
         #print("hsv:",hsv)
@@ -552,6 +562,11 @@ def press(name):
         period = app.getEntry("Period(ms)")
         cycles = app.getEntry(CYCLES)
         duty_cycle = app.getEntry("Duty Cycle")
+        config['period'] = period
+        config['cycles'] = cycles
+        config['duty_cycle'] = duty_cycle
+        config.write()
+        
         #print("period:",period)
         #print("cycles:",cycles)
         #print("duty_cycle:",duty_cycle)
@@ -665,19 +680,35 @@ def rainbow(lan, duration_secs=0.5, smooth=False):
             lan.set_color_all_lights(color, transition_time_ms, rapid)
             sleep(duration_secs)
 
-
+def maxPressed(name):
+    global maxSaturation
+    global maxBrightness
+    
+    if (name == MAX_SATURATION):
+        maxSaturation = app.getCheckBox(MAX_SATURATION)
+        print(name, " is ", maxSaturation)
+    elif (name == MAX_BRIGHTNESS):
+        maxBrightness = app.getCheckBox(MAX_BRIGHTNESS)
+        print(name, " is ", maxBrightness)
+        
+        
+    
 def followDesktop():
     global gSelectAll
     global lan
     global is_follow
     global selected_bulb
     global r
+    global maxSaturation
+    global maxBrightness
     screen_width = app.winfo_screenwidth()
     screen_height = app.winfo_screenheight()
     print("screen_width:", screen_width, " screen_height:", screen_height)
     #print("Follow:", is_follow)
     mysize = max(screen_width, screen_height) * 0.1, max(screen_width, screen_height) * 0.1
     duration = app.getEntry(TRANSITION_TIME)
+    config['transtime'] = duration
+    config.write()
     print("r:", r)
     print("Starting Loop")
 
@@ -733,6 +764,15 @@ def followDesktop():
         hsv = rgb_to_hsv(dominant_color[0] / 255.0, dominant_color[1] / 255.0, dominant_color[2] / 255.0)
 
         #print("hsv:",hsv)
+        #print ("maxSaturation: ",maxSaturation)
+        #print ("maxBrightness: ",maxBrightness)
+        
+        if (maxSaturation) and (hsv[1] > 0.1):
+            hsv = hsv[0], 1, hsv[2]
+        if (maxBrightness) and (hsv[2] > 0.3):
+            hsv = hsv[0], hsv[1], 1
+        #print("hsv:",hsv)
+               
         bulbHSBK = [hsv[0] * 65535.0, (hsv[1] * 65535.0), hsv[2] * 65535.0,3500]
         #print ("bulbHSBK:",bulbHSBK)
 
@@ -750,7 +790,7 @@ def followDesktop():
                 selected_bulb.set_color(bulbHSBK, duration=duration, rapid=True)
             else:
                 app.errorBox("Error", "Error. No bulb was selected. Please select a bulb from the pull-down menu (or tick the 'Select All' checkbox) and try again.")
-                app.setCheckBox("Follow Desktop", False)
+                app.setCheckBox(FOLLOW_DESKTOP, False)
                 is_follow = False
                 return
         except Exception as e:
@@ -762,7 +802,7 @@ def followDesktopPressed(name):
     global is_follow
     global r
     global selectedMode
-    is_follow = app.getCheckBox("Follow Desktop")
+    is_follow = app.getCheckBox(FOLLOW_DESKTOP)
     app.showEntry(TRANSITION_TIME)
     app.showOptionBox(DESKTOP_MODE)
     app.hideLabel(REGION_COLOR)
@@ -808,7 +848,7 @@ def followDesktopPressed(name):
             if not any(r):
                 print("No region selected. Exiting")
                 cv2.destroyAllWindows()
-                app.setCheckBox("Follow Desktop", False)
+                app.setCheckBox(FOLLOW_DESKTOP, False)
                 is_follow = False
                 app.setTransparency(1)
                 return
@@ -1007,10 +1047,6 @@ app.setSticky("ew")
 app.addButton("Execute", press, 5, 0, colspan=3)
 app.setButtonBg("Execute", "cyan")
 
-
-
-
-
 app.stopLabelFrame()
 #-------------------------------------------
 
@@ -1018,7 +1054,7 @@ app.stopLabelFrame()
 
 app.stopLabelFrame()
 
-
+#----------------------------------------------------
 #app.setSticky("news")
 app.startLabelFrame("Bulb Details", 5, 0)
 app.setSticky("ew")
@@ -1027,8 +1063,43 @@ app.addScrolledTextArea("Result", 0, 0)
 app.setTextAreaHeight("Result", 25)
 app.setTextArea("Result", test_string)
 app.stopLabelFrame()
+#-----------------------------------------------------
+
+#-------------------------------------------
+app.startLabelFrame(FOLLOW_DESKTOP, 2, 0)
+#app.setSticky("n")
+modeList = ["-Select Region-      "]
+modeList.append("Whole Screen")
+modeList.append("Rectangular Region")
+app.setSticky("w")
+app.addCheckBox(FOLLOW_DESKTOP, 0, 0)
+app.setCheckBoxChangeFunction(FOLLOW_DESKTOP, followDesktopPressed)
+app.addOptionBox(DESKTOP_MODE, modeList, 0, 1)
+app.setOptionBoxChangeFunction(DESKTOP_MODE, modeChanged)
+app.setOptionBox(DESKTOP_MODE, "Whole Screen", callFunction=False)
+app.addLabelEntry(TRANSITION_TIME, 0, 2)
+app.setEntryWidth(TRANSITION_TIME, 6)
+app.setEntry(TRANSITION_TIME, TRANSITION_TIME_DEFAULT)
+#app.startLabelFrame("Region Color", 0, 3)
+app.addLabel(REGION_COLOR, "", 1, 0, colspan=5)
+app.setLabel(REGION_COLOR, " Desktop Region's Dominant Color")
+app.setLabelHeight(REGION_COLOR, 1)
+app.setLabelBg(REGION_COLOR, "gray")
+app.hideLabel(REGION_COLOR)
+app.setSticky("e")
+app.addCheckBox(MAX_SATURATION, 0, 3)
+app.addCheckBox(MAX_BRIGHTNESS, 0, 4)
+app.setCheckBoxChangeFunction(MAX_SATURATION, maxPressed)
+app.setCheckBoxChangeFunction(MAX_BRIGHTNESS, maxPressed)
 
 
+app.setEntryTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
+app.setLabelTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
+app.setCheckBoxTooltip(FOLLOW_DESKTOP, FOLLOW_DESKTOP_TIP)
+app.setOptionBoxTooltip(DESKTOP_MODE, DESKTOP_MODE_TIP)
+
+app.stopLabelFrame()
+#-------------------------------------------
 
 if not os.path.exists(CONFIG):
     print("Creating .ini file")
@@ -1038,7 +1109,13 @@ if not os.path.exists(CONFIG):
     config['Scene 1'] = "Scene 1"
     config['Scene 2'] = "Scene 2"
     config['Scene 3'] = "Scene 3"
-    config['bulbs'] = {}
+    config['transtime'] = 200
+    config['waveform'] = 'Saw'
+    config['transient'] = True    
+    config['period'] = 500
+    config['cycles'] = 5
+    config['duty_cycle'] = 0
+    config['secondary_color'] = "#FF0000"
 
     config.write()
 
@@ -1046,10 +1123,29 @@ if not os.path.exists(CONFIG):
 #print(".ini file exists")
 config = ConfigObj(CONFIG)
 print("config:", config)
-app.setSpinBox("Expected Bulbs", config['expectedbulbs'])
-app.setEntry("Scene 1", config["Scene 1"], callFunction=False)
-app.setEntry("Scene 2", config["Scene 2"], callFunction=False)
-app.setEntry("Scene 3", config["Scene 3"], callFunction=False)
+
+if 'waveform' in config:
+    app.setRadioButton("waveform",config['waveform'])
+if 'transient' in config:
+    app.setCheckBox("Transient",config['transient'])
+if 'period' in config:
+    app.setEntry("Period(ms)",config['period'])
+if 'cycles' in config:
+    app.setEntry(CYCLES,config['cycles'])
+if 'duty_cycle' in config:
+    app.setEntry("Duty Cycle",config['duty_cycle'])
+if 'secondary_color' in config:
+    app.setLabelBg("lblwaveformcolor", config['secondary_color'])
+if 'expectedbulbs' in config:        
+    app.setSpinBox("Expected Bulbs", config['expectedbulbs'])
+if 'transtime' in config:
+    app.setEntry(TRANSITION_TIME, config['transtime'])
+if 'Scene 1' in config:    
+    app.setEntry("Scene 1", config["Scene 1"], callFunction=False)
+if 'Scene 2' in config:    
+    app.setEntry("Scene 2", config["Scene 2"], callFunction=False)
+if 'Scene 3' in config:    
+    app.setEntry("Scene 3", config["Scene 3"], callFunction=False)
 #print("config['bulbs']:",config['bulbs'])
 #print("type(config['bulbs']):",type(config['bulbs']))
 if os.path.exists(PICKLE):
@@ -1079,39 +1175,7 @@ if os.path.exists(PICKLE):
 lan = lifxlan.LifxLAN()
 
 
-#-------------------------------------------
-app.startLabelFrame("Follow Desktop", 2, 0)
-#app.setSticky("n")
-modeList = ["-Select Region-      "]
-modeList.append("Whole Screen")
-modeList.append("Rectangular Region")
-app.addOptionBox(DESKTOP_MODE, modeList, 0, 1)
-app.setOptionBoxChangeFunction(DESKTOP_MODE, modeChanged)
-app.setOptionBox(DESKTOP_MODE, "Whole Screen", callFunction=False)
-app.addCheckBox("Follow Desktop", 0, 0)
-app.setCheckBoxChangeFunction("Follow Desktop", followDesktopPressed)
-app.addLabelEntry(TRANSITION_TIME, 0, 2)
-app.setEntryWidth(TRANSITION_TIME, 6)
-app.setEntry(TRANSITION_TIME, TRANSITION_TIME_DEFAULT)
-#app.startLabelFrame("Region Color", 0, 3)
-app.setSticky("ew")
-app.addLabel(REGION_COLOR, "", 1, 0, 3)
-app.setLabel(REGION_COLOR, " Desktop Region's Dominant Color")
-app.setLabelHeight(REGION_COLOR, 1)
-#app.setLabelWidth(REGION_COLOR, 5)
-app.setLabelBg(REGION_COLOR, "gray")
-app.hideLabel(REGION_COLOR)
-#app.stopLabelFrame()
 
-
-app.setEntryTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
-app.setLabelTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
-app.setCheckBoxTooltip("Follow Desktop", FOLLOW_DESKTOP_TIP)
-app.setOptionBoxTooltip(DESKTOP_MODE, DESKTOP_MODE_TIP)
-
-app.stopLabelFrame()
-
-#-------------------------------------------
 
 
 
