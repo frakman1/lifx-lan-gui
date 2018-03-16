@@ -446,7 +446,7 @@ def finder():
             app.setLabel("lbl2", "Found 0 bulbs")
             return
         else:
-            app.setLabelBg("lbl2", "green")
+            app.setLabelBg("lbl2", "lime")
             app.hideLabel("f1")
 
         app.setLabel("lbl2", "Found " + str(len(bulbs)) + " bulbs")
@@ -1164,7 +1164,7 @@ if os.path.exists(PICKLE):
     if len(bulbs) > 0:
         app.clearOptionBox("LIFX Bulbs", callFunction=False)
         app.changeOptionBox("LIFX Bulbs", bulbList, callFunction=False)
-        app.setLabelBg("lbl2", "green")
+        app.setLabelBg("lbl2", "lime")
         app.hideLabel("f1")
         app.setLabel("lbl2", "Recalled " + str(len(bulbs)) + " bulbs")
         app.setCheckBox("Select All")
