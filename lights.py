@@ -25,6 +25,7 @@ import appJar as aJ
 import numpy as np
 import cv2
 from scipy.stats import itemfreq
+from mss import mss
 
 myos = system()
 if (myos == 'Windows') or (myos == 'Darwin'):
@@ -48,7 +49,7 @@ TRANSITION_TIME_TIP = "The time (in ms) that a color transition takes"
 FOLLOW_DESKTOP_TIP = "Make your bulbs' color match your desktop"
 DESKTOP_MODE_TIP = "Select between following the whole desktop screen or just a small portion of it (useful for letterbox movies)"
 EXPECTED_BULBS = 2
-TRANSITION_TIME_DEFAULT = 200
+TRANSITION_TIME_DEFAULT = 400
 CONFIG = "lights.ini"
 PICKLE = "lifxList.pkl"
 SCENE1_C = "scene1_c.pkl"
@@ -238,6 +239,40 @@ def updateSliders(hsbk):
     app.setScale("satScale", int(hsbk[1]), callFunction=False)
     app.setScale("briScale", int(hsbk[2]), callFunction=False)
     app.setScale("kelScale", int(hsbk[3]), callFunction=False)
+
+def RGBtoHSBK (RGB, temperature = 3500):
+    cmax = max(RGB)
+    cmin = min(RGB)
+    cdel = cmax - cmin
+
+    brightness = int((cmax/255) * 65535)
+
+    if cdel != 0:
+        saturation = int(((cdel) / cmax) * 65535)
+
+        redc = (cmax - RGB[0]) / (cdel)
+        greenc = (cmax - RGB[1]) / (cdel)
+        bluec = (cmax - RGB[2]) / (cdel)
+
+        if RGB[0] == cmax:
+            hue = bluec - greenc
+        else:
+            if RGB[1] == cmax:
+                hue = 2 + redc - bluec
+            else:
+                hue = 4 + greenc - redc
+
+        hue = hue / 6
+        if hue < 0:
+            hue = hue + 1
+
+        hue = int(hue*65535)
+    else:
+        saturation = 0
+        hue = 0
+
+    return (hue, saturation, brightness, temperature)
+
 
 
 # function to convert the scale values to an RGB hex code
@@ -690,12 +725,15 @@ def maxPressed(name):
     if (name == MAX_SATURATION):
         maxSaturation = app.getCheckBox(MAX_SATURATION)
         print(name, " is ", maxSaturation)
+        config['maxSaturation'] = maxSaturation
     elif (name == MAX_BRIGHTNESS):
         maxBrightness = app.getCheckBox(MAX_BRIGHTNESS)
         print(name, " is ", maxBrightness)
-        
-        
+        config['maxBrightness']=maxBrightness
     
+    config.write()
+        
+        
 def followDesktop():
     global gSelectAll
     global lan
@@ -707,99 +745,83 @@ def followDesktop():
     screen_width = app.winfo_screenwidth()
     screen_height = app.winfo_screenheight()
     print("screen_width:", screen_width, " screen_height:", screen_height)
-    #print("Follow:", is_follow)
-    mysize = max(screen_width, screen_height) * 0.1, max(screen_width, screen_height) * 0.1
+    print("Follow:", is_follow)
     duration = app.getEntry(TRANSITION_TIME)
+    is_evening = app.getCheckBox("Evening Mode")
     config['transtime'] = duration
+    config['is_evening'] = is_evening
     config.write()
+
     print("r:", r)
     print("Starting Loop")
 
-    while (is_follow):
-        #input("Press Enter to continue...")
+    left = r[0]      # The x-offset of where your crop box starts
+    top = r[1]    # The y-offset of where your crop box starts
+    width = r[2]   # The width  of crop box
+    height = r[3]    # The height of crop box
+    box = (left, top, left + width, top + height)
+
+    if (is_follow):
         app.hideEntry(TRANSITION_TIME)
         app.hideOptionBox(DESKTOP_MODE)
         app.showLabel(REGION_COLOR)
+        app.hideCheckBox("Evening Mode")
 
-        left = r[0]      # The x-offset of where your crop box starts
-        top = r[1]    # The y-offset of where your crop box starts
-        width = r[2]   # The width  of crop box
-        height = r[3]    # The height of crop box
-        box = (left, top, left + width, top + height)
-
+    sct = mss()
+    while (is_follow):
+        start = time.time()
         try:
-        # take a screenshot
-            image = ImageGrab.grab(bbox=box)
-        except Exception as e:
-            print ("Ignoring error:", str(e))
-        #image.show()
-        image.thumbnail(mysize)
-        #image.show()
-        #with mss() as sct:
-        #   monitor = {'top': top, 'left': left, 'width': width, 'height': height}
-        #   im = sct.grab(monitor)
-        #   img = cv2.imread(im)
-
-        #printscreen_numpy = np.array(image.getdata(),dtype='uint8').reshape((image.size[1],image.size[0],3))
-        img = np.array(image.convert('RGB'))
-        #cv2.imshow("window",printscreen_numpy)
-        #cv2.waitKey(0)
-        #img = cv2.imread(im)
-        #start = time.clock()
-
-        #average_color = [img[:, :, i].mean() for i in range(img.shape[-1])]
-
-        arr = np.float32(img)
-        pixels = arr.reshape((-1, 3))
-        n_colors = 1
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, .1)
-        flags = cv2.KMEANS_RANDOM_CENTERS
-        _, labels, centroids = cv2.kmeans(pixels, n_colors, None, criteria, 10, flags)
-        palette = np.uint8(centroids)
-        quantized = palette[labels.flatten()]
-        quantized = quantized.reshape(img.shape)
-        dominant_color = palette[np.argmax(itemfreq(labels)[:,-1])]
-        #print ("time1:",time.clock() - start)
-        #print ("average_color: ",average_color)
-        #print("dominant_color: ",dominant_color)
-
-        #hsv = rgb_to_hsv(average_color[0]/255.0, average_color[1]/255.0, average_color[2]/255.0)
-        hsv = rgb_to_hsv(dominant_color[0] / 255.0, dominant_color[1] / 255.0, dominant_color[2] / 255.0)
-
-        #print("hsv:",hsv)
-        #print ("maxSaturation: ",maxSaturation)
-        #print ("maxBrightness: ",maxBrightness)
-        
-        if (maxSaturation) and (hsv[1] > 0.1):
-            hsv = hsv[0], 1, hsv[2]
-        if (maxBrightness) and (hsv[2] > 0.3):
-            hsv = hsv[0], hsv[1], 1
-        #print("hsv:",hsv)
-               
-        bulbHSBK = [hsv[0] * 65535.0, (hsv[1] * 65535.0), hsv[2] * 65535.0,3500]
-        #print ("bulbHSBK:",bulbHSBK)
-
-
-        rgb1 = hsv_to_rgb(hsv[0], hsv[1], hsv[2]);#print("rgb1:",rgb1)
-        c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
-        #print("c:",c)
-        app.setLabelBg(REGION_COLOR, c.hex_l)
-
-        try:
-            if gSelectAll:
-                lan.set_color_all_lights(bulbHSBK, duration=duration, rapid=True)
-            elif selected_bulb:
-                #print("sending color",hsv)
-                selected_bulb.set_color(bulbHSBK, duration=duration, rapid=True)
-            else:
-                app.errorBox("Error", "Error. No bulb was selected. Please select a bulb from the pull-down menu (or tick the 'Select All' checkbox) and try again.")
-                app.setCheckBox(FOLLOW_DESKTOP, False)
-                is_follow = False
-                return
+            # fast screenshot with mss module
+            sct_img = sct.grab(box)
+            image = Image.frombytes('RGB', sct_img.size, sct_img.rgb)
         except Exception as e:
             print ("Ignoring error:", str(e))
 
+        try:
+            # downsample to 1/10th and calculate average RGB color
+            pixels = np.array(image, dtype=np.float32)
+            pixels = pixels[::10,::10,:]
+            pixels = np.transpose(pixels)
+            dominant_color = [np.mean(channel) for channel in pixels]
+
+            # get HSVK color from RGB color
+            # during evenings, kelvin is 3500 (default value returned above)
+            # during the daytime, saturated colors are still 3500 K,
+            # but the whiter the color, the cooler, up to 5000 K
+            (h, s, v, k) = RGBtoHSBK(dominant_color)
+            if not is_evening:
+                k = int(5000 - (s/65535 * 1500))
+            if (maxSaturation) and (s > 6553):
+                s = 65535
+            if (maxBrightness) and (True):
+                v = 65535
+            bulbHSBK = [h, s, v, k]
+            try:
+                if gSelectAll:
+                    lan.set_color_all_lights(bulbHSBK, duration=duration, rapid=True)
+                elif selected_bulb:
+                    selected_bulb.set_color(bulbHSBK, duration=duration, rapid=True)
+                else:
+                    app.errorBox("Error", "Error. No bulb was selected. Please select a bulb from the pull-down menu (or tick the 'Select All' checkbox) and try again.")
+                    app.setCheckBox("FOLLOW_DESKTOP", False)
+                    is_follow = False
+                    return
+            except Exception as e:
+                print ("Ignoring error: ", str(e))
+        except Exception as e:
+            print("Ignoring error: ", str(e))
+
+        # rate limit to prevent from spamming bulbs
+        # the theoretical max speed that the bulbs can handle is one packet
+        # every 0.05 seconds, but empirically I found that 0.1 sec looked better
+        max_speed_sec = 0.1
+        elapsed_time = time.time() - start
+        wait_time = max_speed_sec - elapsed_time
+        if wait_time > 0:
+            sleep(wait_time)
+        #print(elapsed_time, time.time()-start)
     print("Exiting loop")
+
 
 def followDesktopPressed(name):
     global is_follow
@@ -808,6 +830,7 @@ def followDesktopPressed(name):
     is_follow = app.getCheckBox(FOLLOW_DESKTOP)
     app.showEntry(TRANSITION_TIME)
     app.showOptionBox(DESKTOP_MODE)
+    app.showCheckBox("Evening Mode")
     app.hideLabel(REGION_COLOR)
 
     if (is_follow):
@@ -904,7 +927,6 @@ except Exception as e:
     print ("Ignoring error:", str(e))
     #app.errorBox("Error", str(e)+"\n\nTry selecting a bulb from the list first.")
     #return
-
 app.setButton( "Light", "Toggle Selected" )
 #app.setButtonHeight ( "Light", 40 )
 
@@ -1094,7 +1116,9 @@ app.addCheckBox(MAX_SATURATION, 0, 3)
 app.addCheckBox(MAX_BRIGHTNESS, 0, 4)
 app.setCheckBoxChangeFunction(MAX_SATURATION, maxPressed)
 app.setCheckBoxChangeFunction(MAX_BRIGHTNESS, maxPressed)
-
+app.addCheckBox("Evening Mode",0,5)
+#app.hideCheckBox(MAX_SATURATION)
+#app.hideCheckBox(MAX_BRIGHTNESS)
 
 app.setEntryTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
 app.setLabelTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
@@ -1119,14 +1143,23 @@ if not os.path.exists(CONFIG):
     config['cycles'] = 5
     config['duty_cycle'] = 0
     config['secondary_color'] = "#FF0000"
-
+    config['maxSaturation'] = False
+    config['maxBrightness'] = False
+    config['is_evening'] = False
     config.write()
 
 
 #print(".ini file exists")
 config = ConfigObj(CONFIG)
 print("config:", config)
-
+if 'maxSaturation' in config:
+    maxSaturation = (config['maxSaturation']=='True')
+    app.setCheckBox(MAX_SATURATION,ticked=(config['maxSaturation']=='True'),callFunction=False)
+if 'maxBrightness' in config:
+    maxBrightness = (config['maxBrightness']=='True')
+    app.setCheckBox(MAX_BRIGHTNESS,ticked=(config['maxBrightness']=='True'),callFunction=False)
+if 'is_evening' in config:
+    app.setCheckBox("Evening Mode",ticked=(config['is_evening']=='True'),callFunction=False)
 if 'waveform' in config:
     app.setRadioButton("waveform",config['waveform'])
 if 'transient' in config:
@@ -1139,7 +1172,7 @@ if 'duty_cycle' in config:
     app.setEntry("Duty Cycle",config['duty_cycle'])
 if 'secondary_color' in config:
     app.setLabelBg("lblwaveformcolor", config['secondary_color'])
-if 'expectedbulbs' in config:        
+if 'expectedbulbs' in config:
     app.setSpinBox("Expected Bulbs", config['expectedbulbs'])
 if 'transtime' in config:
     app.setEntry(TRANSITION_TIME, config['transtime'])
@@ -1176,10 +1209,5 @@ if os.path.exists(PICKLE):
 #light = Light("12:34:56:78:9a:bc", "192.168.1.42")
 #print("bulbs:",bulbs)
 lan = lifxlan.LifxLAN()
-
-
-
-
-
 
 app.go()
