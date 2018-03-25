@@ -48,7 +48,7 @@ EXPECTED_TIP = "Select 0 to find all available bulbs. Select any number to look 
 TRANSITION_TIME_TIP = "The time (in ms) that a color transition takes"
 FOLLOW_DESKTOP_TIP = "Make your bulbs' color match your desktop"
 DESKTOP_MODE_TIP = "Select between following the whole desktop screen or just a small portion of it (useful for letterbox movies)"
-EXPECTED_BULBS = 2
+EXPECTED_BULBS = 0
 TRANSITION_TIME_DEFAULT = 400
 CONFIG = "lights.ini"
 PICKLE = "lifxList.pkl"
@@ -356,7 +356,7 @@ def selectAllPressed (name):
 def expectedPressed (name):
     global gExpectedBulbs
     global config
-    gExpectedBulbs = app.getSpinBox("Expected Bulbs")
+    gExpectedBulbs = int(app.getSpinBox("Expected Bulbs"))
     config['expectedbulbs'] = gExpectedBulbs
     config.write()
     #print("gExpectedBulbs:",gExpectedBulbs)
@@ -685,29 +685,45 @@ def press(name):
         #listChanged()
 
 def rainbow_press(name):
-    print("Discovering lights...")
-    lan = lifxlan.LifxLAN(EXPECTED_BULBS)
-    original_colors = lan.get_color_all_lights()
-    original_powers = lan.get_power_all_lights()
+    global gExpectedBulbs
+    global bulbs
+    global lan
+    #print ("len(bulbs):",len(bulbs))    
+    try:
+        print("Discovering lights...")
+        lan = lifxlan.LifxLAN(int(gExpectedBulbs) if int(gExpectedBulbs) != 0 else None)
+        if lan is None:
+            print("Error finding bulbs")
+            return
+        bulbs = lan.get_lights()
+        if len(bulbs) < 1:
+            print("No bulbs found. Exiting.")
+            return
+        
+        #print("lan:",lan,"type(lan):",type(lan))
+        original_colors = lan.get_color_all_lights()
+        original_powers = lan.get_power_all_lights()
 
-    print("Turning on all lights...")
-    lan.set_power_all_lights(True)
-    sleep(1)
+        print("Turning on all lights...")
+        lan.set_power_all_lights(True)
+        sleep(1)
 
-    print("Flashy fast rainbow")
-    rainbow(lan, 0.4)
+        print("Flashy fast rainbow")
+        rainbow(lan, 0.4)
 
-    #print("Smooth slow rainbow")
-    #rainbow(lan, 1, smooth=True)
-    print("Restoring original color to all lights...")
-    for light in original_colors:
-        light.set_color(original_colors[light])
+        #print("Smooth slow rainbow")
+        #rainbow(lan, 1, smooth=True)
+        print("Restoring original color to all lights...")
+        for light in original_colors:
+            light.set_color(original_colors[light])
 
-    sleep(1)
+        sleep(1)
 
-    print("Restoring original power to all lights...")
-    for light in original_powers:
-        light.set_power(original_powers[light])
+        print("Restoring original power to all lights...")
+        for light in original_powers:
+            light.set_power(original_powers[light])
+    except Exception as e:
+        print ("Ignoring error:", str(e))
 
 def rainbow(lan, duration_secs=0.5, smooth=False):
     colors = [RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE, PINK]
@@ -783,7 +799,8 @@ def followDesktop():
             pixels = pixels[::10,::10,:]
             pixels = np.transpose(pixels)
             dominant_color = [np.mean(channel) for channel in pixels]
-
+            c = Color(rgb=(dominant_color[0]/255, dominant_color[1]/255, dominant_color[2]/255))
+            app.setLabelBg(REGION_COLOR, c.hex_l)
             # get HSVK color from RGB color
             # during evenings, kelvin is 3500 (default value returned above)
             # during the daytime, saturated colors are still 3500 K,
@@ -891,7 +908,9 @@ app = App("LIFX Controller")
 #app = gui("LIFX Controller")
 app.setStretch("both")
 app.setResizable(True)
-app.setFont(12)
+#app.setFont(12)
+app.setFont(size=12, family="Arial")
+
 
 app.setSticky("new")
 
