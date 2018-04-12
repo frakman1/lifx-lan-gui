@@ -43,6 +43,6 @@ Currently tested on `Windows 7 & 10, 64bit`, `Linux (Ubuntu 14.04.1-32bit)` and 
 
 ### Packaging notes:
 - Windows:
-`pyinstaller --add-data "*.gif;."  --icon=lifxgui.ico  --onefile -F -w lights.py`
+`pyinstaller --one-dir  --icon=lifxgui.ico -F --clean lights.spec`
 - Mac:
 `pyinstaller --add-data "*.gif:."  --icon=lifxgui.ico  --onefile -F -c lights.py`
