@@ -43,6 +43,6 @@ Currently tested on `Windows 7 & 10, 64bit`, `Linux (Ubuntu 14.04.1-32bit)` and 
 
 ### Packaging notes:
 - Windows:
-`pyinstaller --one-dir  --icon=lifxgui.ico -F --clean lights.spec`
+see [.spec file here](https://github.com/frakman1/lifx-lan-gui/blob/master/pyinstaller/win_lights.spec)
 - Mac:
 `pyinstaller --hidden-import numpy --hidden-import cv2 --hidden-import scipy._lib.messagestream --add-data "*.gif:." --icon=lifxgui.ico --onefile --windowed --clean -F -c lights.py`
