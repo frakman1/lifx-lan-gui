@@ -38,6 +38,21 @@ if (myos == 'Windows'):
 elif (myos == 'Darwin') or (myos == 'Linux') :
     mygreen = 'green'
 
+def resource_path(relative_path):
+    if (myos == 'Windows'):
+        """ Get absolute path to resource, works for dev and for PyInstaller """
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.abspath(".")
+        
+        return os.path.join(base_path, relative_path)
+
+    elif (myos == 'Darwin') or (myos == 'Linux') :
+        """ Get absolute path to resource, works for dev and for PyInstaller """
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(base_path, relative_path)
 
 DECIMATE = 1   # skip every DECIMATE number of pixels to speed up calculation
 TRANSIENT_TIP = "If selected, return to the original color after the specified number of cycles. If not selected, set light to specified color"
@@ -50,14 +65,14 @@ FOLLOW_DESKTOP_TIP = "Make your bulbs' color match your desktop"
 DESKTOP_MODE_TIP = "Select between following the whole desktop screen or just a small portion of it (useful for letterbox movies)"
 EXPECTED_BULBS = 0
 TRANSITION_TIME_DEFAULT = 400
-CONFIG = "lights.ini"
-PICKLE = "lifxList.pkl"
-SCENE1_C = "scene1_c.pkl"
-SCENE1_P = "scene1_p.pkl"
-SCENE2_C = "scene2_c.pkl"
-SCENE2_P = "scene2_p.pkl"
-SCENE3_C = "scene3_c.pkl"
-SCENE3_P = "scene3_p.pkl"
+CONFIG = resource_path("lights.ini")
+PICKLE = resource_path("lifxList.pkl")
+SCENE1_C = resource_path("scene1_c.pkl")
+SCENE1_P = resource_path("scene1_p.pkl")
+SCENE2_C = resource_path("scene2_c.pkl")
+SCENE2_P = resource_path("scene2_p.pkl")
+SCENE3_C = resource_path("scene3_c.pkl")
+SCENE3_P = resource_path("scene3_p.pkl")
 CYCLES = "Cycles"
 TRANSITION_TIME = "Transition Time(ms)"
 FOLLOW_DESKTOP = "Follow Desktop"
@@ -440,10 +455,10 @@ def listChanged():
     try:
         if "Power: On" in details:
             #print ("BULB is ON")
-            app.setButtonImage("Light", "bulb_on.gif")
+            app.setButtonImage("Light", resource_path("bulb_on.gif"))
         elif "Power: Off" in details:
             #print ("BULB is OFF ")
-            app.setButtonImage("Light", "bulb_off.gif")
+            app.setButtonImage("Light", resource_path("bulb_off.gif"))
     except Exception as e:
         print ("Ignoring error:", str(e))
 
@@ -661,7 +676,7 @@ def press(name):
         if "Power: Off" in details:
             selected_bulb.set_power(65535, duration=0, rapid=False)
             try:
-                app.setButtonImage("Light", "bulb_on.gif");#print("PowerOn");
+                app.setButtonImage("Light", resource_path("bulb_on.gif"));#print("PowerOn");
             except Exception as e:
                 print ("Ignoring error:", str(e))
             details = details.replace("Power: Off", "Power: On");
@@ -671,7 +686,7 @@ def press(name):
         else:
             selected_bulb.set_power(0, duration=0, rapid=False)
             try:
-                app.setButtonImage("Light", "bulb_off.gif");#print("PowerOff");
+                app.setButtonImage("Light", resource_path("bulb_off.gif"));#print("PowerOff");
             except Exception as e:
                 print ("Ignoring error:", str(e))
             details = details.replace("Power: On", "Power: Off"); #print("details:\n",details)
@@ -941,7 +956,7 @@ app.addOptionBox("LIFX Bulbs", bulbList, 1, 1)
 app.setOptionBoxChangeFunction("LIFX Bulbs", listChanged)
 app.setSticky("n")
 try:
-    app.addImageButton("Light", press, "bulb_off.gif", 2, 2)
+    app.addImageButton("Light", press, resource_path("bulb_off.gif"), 2, 2)
 except Exception as e:
     print ("Ignoring error:", str(e))
     #app.errorBox("Error", str(e)+"\n\nTry selecting a bulb from the list first.")
@@ -969,7 +984,7 @@ app.addNamedButton("Save", "Save Scene 3", Scene, 2, 1)
 app.addNamedButton("Restore", "Restore Scene 3", Scene, 2, 2)
 app.stopLabelFrame()
 #-------------------------------------------------------------------------------
-#app.setButtonImage("picker", "colorpicker.gif", align=None)
+#app.setButtonImage("picker", resource_path("colorpicker.gif"), align=None)
 ###
 app.setSticky("ne")
 app.startLabelFrame("All LAN Bulbs", 0, 2)
