@@ -922,7 +922,7 @@ def ColorCycle():
     
     print("is_cycle:", is_cycle, " gCycleInterval:", gCycleInterval, "gCycleDelta:", gCycleDelta, "gCycleHue:", gCycleHue)
     if is_cycle:
-        app.setLabel(CURRENT_HUE, gCycleHue)
+
         gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
         bulbHSBK = [gCycleHue, 65535, 65535, 3500]
         try:
@@ -937,6 +937,9 @@ def ColorCycle():
                 return
         except Exception as e:
             print ("Ignoring error: ", str(e))
+
+        #Update the GUI the appJar way
+        app.queueFunction(app.setLabel, CURRENT_HUE, gCycleHue)
         
         
 def ColorCyclePressed(name):
