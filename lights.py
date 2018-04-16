@@ -65,7 +65,13 @@ DESKTOP_MODE = "Desktop Mode"
 REGION_COLOR = "regioncolor"
 MAX_SATURATION = "Max Saturation"
 MAX_BRIGHTNESS = "Max Brightness"
-
+COLOR_CYCLE = "Color Cycle"
+CYCLE_INTERVAL = "Update Interval(ms)" #update interval
+HUE_DELTA = "Hue Delta"
+CURRENT_HUE = "CurrentHue"
+START_COLOR_CYCLE = "StartColorCycle"
+CYCLE_HUE_DELTA = 600
+CYCLE_INTERVAL_MS = 2000
 alreadyDone = False
 config = {}
 bulbs = []
@@ -91,6 +97,10 @@ r = None
 selectedMode = "Whole Screen"
 maxSaturation = False
 maxBrightness = False
+is_cycle = False
+gCycleHue = 0
+gCycleInterval = 1000
+gCycleDelta = 600
 
 class App(aJ.gui):
     def __init__(self, *args, **kwargs):
@@ -902,6 +912,45 @@ def followDesktopPressed(name):
         app.thread(followDesktop)
 
 
+def ColorCycle():
+    global is_cycle
+    global gCycleHue
+    global gCycleDelta
+    global gSelectAll
+    global selected_bulb
+    global lan
+    
+    print("is_cycle:", is_cycle, " gCycleInterval:", gCycleInterval, "gCycleDelta:", gCycleDelta, "gCycleHue:", gCycleHue)
+    if is_cycle:
+        app.setLabel(CURRENT_HUE, gCycleHue)
+        gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
+        bulbHSBK = [gCycleHue, 65535, 65535, 3500]
+        try:
+            if gSelectAll:
+                lan.set_color_all_lights(bulbHSBK,400, rapid=True)
+            elif selected_bulb:
+                selected_bulb.set_color(bulbHSBK, 400, rapid=True)
+            else:
+                app.errorBox("Error", "Error. No bulb was selected. Please select a bulb from the pull-down menu (or tick the 'Select All' checkbox) and try again.")
+                app.setCheckBox(START_COLOR_CYCLE, False)
+                is_follow = False
+                return
+        except Exception as e:
+            print ("Ignoring error: ", str(e))
+        
+        
+def ColorCyclePressed(name):
+    
+    global is_cycle
+    global gCycleDelta
+    global gCycleInterval
+    
+    is_cycle = app.getCheckBox(START_COLOR_CYCLE)
+    gCycleInterval = int(app.getEntry(CYCLE_INTERVAL))
+    app.setPollTime(gCycleInterval)
+    gCycleDelta = int(app.getEntry(HUE_DELTA))
+    
+    
 bulbList = ["-None-          "]
 
 app = App("LIFX Controller")
@@ -913,6 +962,7 @@ app.setFont(size=12, family="Arial")
 
 
 app.setSticky("new")
+app.setStretch("COLUMN")
 
 app.startLabelFrame("", 0, 0)
 app.setSticky("new")
@@ -1048,7 +1098,73 @@ app.setLabelBg("bulbcolor", "gray")
 app.stopLabelFrame()
 
 app.stopLabelFrame()
+app.stopLabelFrame()
+
+#-----------------------------------------------------
+app.setSticky("new")
 #-------------------------------------------
+
+app.startLabelFrame(" ")
+
+app.startTabbedFrame("TabbedFrame")
+#---------------------------------------------------------------------------------------------------------
+app.startTab("Bulbs Details")
+#app.setSticky("news")
+#app.startLabelFrame("Bulb Details")
+#app.setSticky("ew")
+#app.setStretch("both")
+app.addScrolledTextArea("Result")
+app.setTextAreaWidth("Result", 110)
+app.setTextAreaHeight("Result", 22)
+app.setTextArea("Result", test_string)
+#app.stopLabelFrame()
+app.stopTab() #"Bulbs Details"
+#---------------------------------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------------------------------------
+app.startTab("Follow Desktop")
+app.startLabelFrame(FOLLOW_DESKTOP, 0, 0)
+#app.setSticky("n")
+modeList = ["-Select Region-      "]
+modeList.append("Whole Screen")
+modeList.append("Rectangular Region")
+app.setSticky("w")
+app.addCheckBox(FOLLOW_DESKTOP, 0, 0)
+app.setCheckBoxChangeFunction(FOLLOW_DESKTOP, followDesktopPressed)
+app.addOptionBox(DESKTOP_MODE, modeList, 0, 1)
+app.setOptionBoxChangeFunction(DESKTOP_MODE, modeChanged)
+app.setOptionBox(DESKTOP_MODE, "Whole Screen", callFunction=False)
+app.addLabelEntry(TRANSITION_TIME, 0, 2)
+app.setEntryWidth(TRANSITION_TIME, 6)
+app.setEntry(TRANSITION_TIME, TRANSITION_TIME_DEFAULT)
+#app.startLabelFrame("Region Color", 0, 3)
+app.addLabel(REGION_COLOR, "", 1, 0, colspan=5)
+app.setLabel(REGION_COLOR, " Desktop Region's Dominant Color")
+app.setLabelHeight(REGION_COLOR, 1)
+app.setLabelBg(REGION_COLOR, "gray")
+app.hideLabel(REGION_COLOR)
+app.setSticky("e")
+app.addCheckBox(MAX_SATURATION, 0, 3)
+app.addCheckBox(MAX_BRIGHTNESS, 0, 4)
+app.setCheckBoxChangeFunction(MAX_SATURATION, maxPressed)
+app.setCheckBoxChangeFunction(MAX_BRIGHTNESS, maxPressed)
+app.addCheckBox("Evening Mode",0,5)
+#app.hideCheckBox(MAX_SATURATION)
+#app.hideCheckBox(MAX_BRIGHTNESS)
+
+app.setEntryTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
+app.setLabelTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
+app.setCheckBoxTooltip(FOLLOW_DESKTOP, FOLLOW_DESKTOP_TIP)
+app.setOptionBoxTooltip(DESKTOP_MODE, DESKTOP_MODE_TIP)
+
+app.stopLabelFrame() #FOLLOW_DESKTOP
+app.stopTab() #"Follow Desktop"
+#---------------------------------------------------------------------------------------------------------
+
+
+#---------------------------------------------------------------------------------------------------------
+app.startTab("WaveForm")
+#app.addLabel("l3", "Tab 3 Label")
 app.startLabelFrame("Waveform", 1, 1, 5, 1)
 #app.setFrameWidth("Waveform",20)
 #app.setSticky("news")
@@ -1091,61 +1207,33 @@ app.setSticky("ew")
 app.addButton("Execute", press, 5, 0, colspan=3)
 app.setButtonBg("Execute", "cyan")
 
-app.stopLabelFrame()
-#-------------------------------------------
+app.stopLabelFrame() #"WaveForm"
+app.stopTab() #"WaveForm"
+#---------------------------------------------------------------------------------------------------------
 
-
-
-app.stopLabelFrame()
-
-#----------------------------------------------------
-#app.setSticky("news")
-app.startLabelFrame("Bulb Details", 5, 0)
-app.setSticky("ew")
-app.addScrolledTextArea("Result", 0, 0)
-#app.setTextAreaWidth("Result", 45)
-app.setTextAreaHeight("Result", 25)
-app.setTextArea("Result", test_string)
-app.stopLabelFrame()
-#-----------------------------------------------------
-
-#-------------------------------------------
-app.startLabelFrame(FOLLOW_DESKTOP, 2, 0)
-#app.setSticky("n")
-modeList = ["-Select Region-      "]
-modeList.append("Whole Screen")
-modeList.append("Rectangular Region")
+#---------------------------------------------------------------------------------------------------------
+app.startTab(COLOR_CYCLE)
 app.setSticky("w")
-app.addCheckBox(FOLLOW_DESKTOP, 0, 0)
-app.setCheckBoxChangeFunction(FOLLOW_DESKTOP, followDesktopPressed)
-app.addOptionBox(DESKTOP_MODE, modeList, 0, 1)
-app.setOptionBoxChangeFunction(DESKTOP_MODE, modeChanged)
-app.setOptionBox(DESKTOP_MODE, "Whole Screen", callFunction=False)
-app.addLabelEntry(TRANSITION_TIME, 0, 2)
-app.setEntryWidth(TRANSITION_TIME, 6)
-app.setEntry(TRANSITION_TIME, TRANSITION_TIME_DEFAULT)
-#app.startLabelFrame("Region Color", 0, 3)
-app.addLabel(REGION_COLOR, "", 1, 0, colspan=5)
-app.setLabel(REGION_COLOR, " Desktop Region's Dominant Color")
-app.setLabelHeight(REGION_COLOR, 1)
-app.setLabelBg(REGION_COLOR, "gray")
-app.hideLabel(REGION_COLOR)
-app.setSticky("e")
-app.addCheckBox(MAX_SATURATION, 0, 3)
-app.addCheckBox(MAX_BRIGHTNESS, 0, 4)
-app.setCheckBoxChangeFunction(MAX_SATURATION, maxPressed)
-app.setCheckBoxChangeFunction(MAX_BRIGHTNESS, maxPressed)
-app.addCheckBox("Evening Mode",0,5)
-#app.hideCheckBox(MAX_SATURATION)
-#app.hideCheckBox(MAX_BRIGHTNESS)
+app.addCheckBox(START_COLOR_CYCLE)
+app.setCheckBoxChangeFunction(START_COLOR_CYCLE, ColorCyclePressed)
 
-app.setEntryTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
-app.setLabelTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
-app.setCheckBoxTooltip(FOLLOW_DESKTOP, FOLLOW_DESKTOP_TIP)
-app.setOptionBoxTooltip(DESKTOP_MODE, DESKTOP_MODE_TIP)
+app.addLabelEntry(CYCLE_INTERVAL)
+app.addLabelEntry(HUE_DELTA)
+app.addLabel(CURRENT_HUE, "N/A")
 
-app.stopLabelFrame()
-#-------------------------------------------
+app.setEntry(CYCLE_INTERVAL,CYCLE_INTERVAL_MS)
+app.setEntry(HUE_DELTA,CYCLE_HUE_DELTA)
+
+app.registerEvent(ColorCycle)
+app.setPollTime(int(CYCLE_INTERVAL_MS))
+
+
+app.stopTab() #COLOR_CYCLE
+#---------------------------------------------------------------------------------------------------------
+app.stopTabbedFrame()
+
+app.stopLabelFrame()# " "
+
 
 if not os.path.exists(CONFIG):
     print("Creating .ini file")
