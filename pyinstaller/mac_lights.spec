@@ -1,13 +1,13 @@
-# -*- mode: python -*-
+# -*- mode: python3 -*-
 
 block_cipher = None
 
 
 a = Analysis(['lights.py'],
-             pathex=['c:\\dev\\lifx-lan-gui','C:\\Users\\Al-nuaimyF\\AppData\\Local\\Programs\\Python\\Python36\\Lib\\site-packages\\scipy\\extra-dll'],
+             pathex=['../lifx-lan-gui'],
              binaries=[],
-             datas=[('bulb_off.gif', 'bulb_on.gif')],
-             hiddenimports=['scipy._lib.messagestream'],
+             datas=[('*.gif', '.')],
+             hiddenimports=['numpy', 'cv2', 'scipy._lib.messagestream'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -26,4 +26,9 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=True , icon='lifxgui.ico')
+          console=False , icon='lifxgui.ico')
+		  
+app = BUNDLE(exe,
+          name='LifxLanGUI.app',
+          icon='lifxgui.icns',
+          bundle_identifier=None)
