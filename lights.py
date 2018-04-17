@@ -48,6 +48,8 @@ EXPECTED_TIP = "Select 0 to find all available bulbs. Select any number to look 
 TRANSITION_TIME_TIP = "The time (in ms) that a color transition takes"
 FOLLOW_DESKTOP_TIP = "Make your bulbs' color match your desktop"
 DESKTOP_MODE_TIP = "Select between following the whole desktop screen or just a small portion of it (useful for letterbox movies)"
+HUE_DELTA_TIP = "The amount the hue will change every interval (between 0 and 65535)"
+CYCLE_INTERVAL_TIP = "The time (in ms) between each update"
 EXPECTED_BULBS = 0
 TRANSITION_TIME_DEFAULT = 400
 CONFIG = "lights.ini"
@@ -68,8 +70,9 @@ MAX_BRIGHTNESS = "Max Brightness"
 COLOR_CYCLE = "Color Cycle"
 CYCLE_INTERVAL = "Update Interval(ms)" #update interval
 HUE_DELTA = "Hue Delta"
-CURRENT_HUE = "CurrentHue"
-START_COLOR_CYCLE = "StartColorCycle"
+START_COLOR_CYCLE = "Start Color Cycle"
+CYCLE_COLOR = "CycleColor"
+TRANSITION_TIME2 = "Transition Time (ms)"
 CYCLE_HUE_DELTA = 600
 CYCLE_INTERVAL_MS = 2000
 alreadyDone = False
@@ -99,8 +102,9 @@ maxSaturation = False
 maxBrightness = False
 is_cycle = False
 gCycleHue = 0
-gCycleInterval = 1000
-gCycleDelta = 600
+gCycleInterval = CYCLE_INTERVAL_MS
+gCycleDelta = CYCLE_HUE_DELTA
+gTransitionTime = TRANSITION_TIME_DEFAULT
 
 class App(aJ.gui):
     def __init__(self, *args, **kwargs):
@@ -369,7 +373,7 @@ def expectedPressed (name):
     gExpectedBulbs = int(app.getSpinBox("Expected Bulbs"))
     config['expectedbulbs'] = gExpectedBulbs
     config.write()
-    #print("gExpectedBulbs:",gExpectedBulbs)
+    print("gExpectedBulbs:",gExpectedBulbs)
 
 
 def rgb_to_hsv(r, g, b):
@@ -919,17 +923,23 @@ def ColorCycle():
     global gSelectAll
     global selected_bulb
     global lan
+    global gTransitionTime
     
-    print("is_cycle:", is_cycle, " gCycleInterval:", gCycleInterval, "gCycleDelta:", gCycleDelta, "gCycleHue:", gCycleHue)
+    
+    #print("is_cycle:", is_cycle, " gCycleInterval:", gCycleInterval, "gCycleDelta:", gCycleDelta, "gCycleHue:", gCycleHue)
     if is_cycle:
 
         gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
         bulbHSBK = [gCycleHue, 65535, 65535, 3500]
+        rgb1 = hsv_to_rgb(gCycleHue/65535, 1, 1);#print("rgb1:",rgb1)
+        c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
+        
+        
         try:
             if gSelectAll:
-                lan.set_color_all_lights(bulbHSBK,400, rapid=True)
+                lan.set_color_all_lights(bulbHSBK,gTransitionTime, rapid=True)
             elif selected_bulb:
-                selected_bulb.set_color(bulbHSBK, 400, rapid=True)
+                selected_bulb.set_color(bulbHSBK, gTransitionTime, rapid=True)
             else:
                 app.errorBox("Error", "Error. No bulb was selected. Please select a bulb from the pull-down menu (or tick the 'Select All' checkbox) and try again.")
                 app.setCheckBox(START_COLOR_CYCLE, False)
@@ -939,21 +949,33 @@ def ColorCycle():
             print ("Ignoring error: ", str(e))
 
         #Update the GUI the appJar way
-        app.queueFunction(app.setLabel, CURRENT_HUE, gCycleHue)
+        #app.queueFunction(app.setLabelBg, CYCLE_COLOR, c.hex_l)
+        app.setLabelBg(CYCLE_COLOR, c.hex_l)
         
+    else:
+        app.setPollTime(CYCLE_INTERVAL_MS)
+        
+
         
 def ColorCyclePressed(name):
     
     global is_cycle
     global gCycleDelta
     global gCycleInterval
+    global gTransitionTime
     
-    is_cycle = app.getCheckBox(START_COLOR_CYCLE)
-    gCycleInterval = int(app.getEntry(CYCLE_INTERVAL))
-    app.setPollTime(gCycleInterval)
-    gCycleDelta = int(app.getEntry(HUE_DELTA))
+    try:
+        is_cycle = app.getCheckBox(START_COLOR_CYCLE)
+        gCycleInterval = int(app.getEntry(CYCLE_INTERVAL))
+        app.setPollTime(gCycleInterval)
+        gCycleDelta = int(app.getEntry(HUE_DELTA))
+        gTransitionTime = app.getEntry(TRANSITION_TIME2)
+    except Exception as e:
+        print ("Ignoring error: ", str(e))
     
-    
+    print("ColorCyclePressed()")
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------    
 bulbList = ["-None-          "]
 
 app = App("LIFX Controller")
@@ -1222,10 +1244,28 @@ app.setCheckBoxChangeFunction(START_COLOR_CYCLE, ColorCyclePressed)
 
 app.addLabelEntry(CYCLE_INTERVAL)
 app.addLabelEntry(HUE_DELTA)
-app.addLabel(CURRENT_HUE, "N/A")
 
 app.setEntry(CYCLE_INTERVAL,CYCLE_INTERVAL_MS)
 app.setEntry(HUE_DELTA,CYCLE_HUE_DELTA)
+app.setEntryChangeFunction(CYCLE_INTERVAL, ColorCyclePressed)
+app.setEntryChangeFunction(HUE_DELTA, ColorCyclePressed)
+
+
+app.addLabelEntry(TRANSITION_TIME2,)
+#app.setEntryWidth(TRANSITION_TIME, 6)
+app.setEntry(TRANSITION_TIME2, TRANSITION_TIME_DEFAULT)
+app.setEntryChangeFunction(TRANSITION_TIME2, ColorCyclePressed)
+app.setEntryTooltip(TRANSITION_TIME2, TRANSITION_TIME_TIP)
+app.setLabelTooltip(TRANSITION_TIME2, TRANSITION_TIME_TIP)
+app.setEntryTooltip(HUE_DELTA, HUE_DELTA_TIP)
+app.setLabelTooltip(HUE_DELTA, HUE_DELTA_TIP)
+app.setEntryTooltip(CYCLE_INTERVAL, CYCLE_INTERVAL_TIP)
+app.setLabelTooltip(CYCLE_INTERVAL, CYCLE_INTERVAL_TIP)
+
+app.setSticky("ew")
+
+app.addLabel(CYCLE_COLOR, "COLOR")
+
 
 app.registerEvent(ColorCycle)
 app.setPollTime(int(CYCLE_INTERVAL_MS))
