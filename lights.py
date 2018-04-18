@@ -63,6 +63,9 @@ EXPECTED_TIP = "Select 0 to find all available bulbs. Select any number to look 
 TRANSITION_TIME_TIP = "The time (in ms) that a color transition takes"
 FOLLOW_DESKTOP_TIP = "Make your bulbs' color match your desktop"
 DESKTOP_MODE_TIP = "Select between following the whole desktop screen or just a small portion of it (useful for letterbox movies)"
+HUE_DELTA_TIP = "The amount the hue will change every interval (between 0 and 65535)"
+CYCLE_INTERVAL_TIP = "The time (in ms) between each update"
+CYCLE_SATURATION_TIP = "How saturated you want the hue to be (between 0 and 65535)"
 EXPECTED_BULBS = 0
 TRANSITION_TIME_DEFAULT = 400
 CONFIG = resource_path("lights.ini")
@@ -80,7 +83,16 @@ DESKTOP_MODE = "Desktop Mode"
 REGION_COLOR = "regioncolor"
 MAX_SATURATION = "Max Saturation"
 MAX_BRIGHTNESS = "Max Brightness"
+COLOR_CYCLE = "Color Cycle"
+CYCLE_INTERVAL = "Update Interval(ms)" #update interval
+HUE_DELTA = "Hue Delta"
+START_COLOR_CYCLE = "Start Color Cycle"
+CYCLE_COLOR = "CycleColor"
+TRANSITION_TIME2 = "Transition Time (ms)"
+CYCLE_SATURATION = "Saturation"
 
+CYCLE_HUE_DELTA = 600
+CYCLE_INTERVAL_MS = 2000
 alreadyDone = False
 config = {}
 bulbs = []
@@ -106,6 +118,14 @@ r = None
 selectedMode = "Whole Screen"
 maxSaturation = False
 maxBrightness = False
+is_cycle = False
+gCycleHue = 0
+gCycleInterval = CYCLE_INTERVAL_MS
+gCycleDelta = CYCLE_HUE_DELTA
+gTransitionTime = TRANSITION_TIME_DEFAULT
+gCycleSaturation = 65535
+gCycleBrightness = 65535
+gCycleKelvin = 3500
 
 class App(aJ.gui):
     def __init__(self, *args, **kwargs):
@@ -254,6 +274,12 @@ def updateSliders(hsbk):
     app.setScale("satScale", int(hsbk[1]), callFunction=False)
     app.setScale("briScale", int(hsbk[2]), callFunction=False)
     app.setScale("kelScale", int(hsbk[3]), callFunction=False)
+    
+    rgb1 = hsv_to_rgb((hsbk[0]/65535), (hsbk[1]/65535), (hsbk[2]/65535));#print("rgb1:",rgb1)
+    c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
+    #print("c:",c)
+    app.setLabelBg("bulbcolor", c.hex_l)
+    
 
 def RGBtoHSBK (RGB, temperature = 3500):
     cmax = max(RGB)
@@ -292,10 +318,21 @@ def RGBtoHSBK (RGB, temperature = 3500):
 
 # function to convert the scale values to an RGB hex code
 def getHSB():
+
+    global gCycleHue 
+    global gCycleSaturation
+    global gCycleBrightness
+    global gCycleKelvin
+    
     H = app.getScale("hueScale")
     S = app.getScale("satScale")
     B = app.getScale("briScale")
     K = app.getScale("kelScale")
+    
+    gCycleHue = int(H)
+    gCycleSaturation = int(S)
+    gCycleBrightness = int(B)
+    gCycleKelvin = int(K)
 
     #RGB = "#"+str(R)+str(G)+str(B)
 
@@ -346,16 +383,23 @@ def updateHSB(name):
     global selected_bulb
     bulbHSBK = [HSB["H"],HSB["S"],HSB["B"],k]
     #print ("bulbHSBK:",bulbHSBK)
-
-    if gSelectAll:
-        lan.set_color_all_lights(bulbHSBK, duration=0, rapid=False)
-
-    elif selected_bulb:
-        #print("sending color",hsv)
-        selected_bulb.set_color(bulbHSBK, duration=0, rapid=False)
+    app.thread(updateBulbs, bulbHSBK )
 
     #app.setEntry("colCode", RGB)
 
+def updateBulbs(bulbHSBK):
+    try:
+        
+        if gSelectAll:
+            lan.set_color_all_lights(bulbHSBK, duration=0, rapid=False)
+
+        elif selected_bulb:
+            #print("sending color",hsv)
+            selected_bulb.set_color(bulbHSBK, duration=0, rapid=False)
+    
+    except Exception as e:
+        print ("Ignoring error: ", str(e))
+    
 
 def selectAllPressed (name):
     global bulbs
@@ -374,7 +418,7 @@ def expectedPressed (name):
     gExpectedBulbs = int(app.getSpinBox("Expected Bulbs"))
     config['expectedbulbs'] = gExpectedBulbs
     config.write()
-    #print("gExpectedBulbs:",gExpectedBulbs)
+    print("gExpectedBulbs:",gExpectedBulbs)
 
 
 def rgb_to_hsv(r, g, b):
@@ -544,6 +588,10 @@ def press(name):
     global lan
     global gwaveformcolor
     global selected_bulb
+    global gCycleHue
+    global gCycleBrightness
+    global gCycleSaturation
+    
 
     #print(name, "button pressed")
 
@@ -648,7 +696,12 @@ def press(name):
         hsv = rgb_to_hsv(c.red, c.green, c.blue)
         #print("hsv:",hsv)
         bulbHSBK = [hsv[0] * 65535.0,hsv[1] * 65535.0,hsv[2] * 65535.0,3500]
+        gCycleHue = bulbHSBK[0]
+        gCycleSaturation = bulbHSBK[1]
+        gCycleBrightness = bulbHSBK[2]
+        
         #print ("bulbHSBK:",bulbHSBK)
+        updateBulbs(bulbHSBK)
         if gSelectAll:
             lan.set_color_all_lights(bulbHSBK, duration=0, rapid=False)
         elif selected_bulb:
@@ -917,6 +970,72 @@ def followDesktopPressed(name):
         app.thread(followDesktop)
 
 
+def ColorCycle():
+    global is_cycle
+    global gCycleHue
+    global gCycleDelta
+    global gSelectAll
+    global selected_bulb
+    global lan
+    global gTransitionTime
+    global gCycleSaturation
+    global gCycleBrightness
+    global gCycleKelvin
+
+    
+    #print("is_cycle:", is_cycle, " gCycleInterval:", gCycleInterval, "gCycleDelta:", gCycleDelta, "gCycleHue:", gCycleHue)
+    if is_cycle:
+
+        gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
+        bulbHSBK = [gCycleHue, gCycleSaturation, gCycleBrightness, gCycleKelvin]
+        rgb1 = hsv_to_rgb(gCycleHue/65535, gCycleSaturation/65535, gCycleBrightness/65535);#print("rgb1:",rgb1)
+        c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
+        
+        
+        try:
+            if gSelectAll:
+                lan.set_color_all_lights(bulbHSBK,gTransitionTime, rapid=True)
+            elif selected_bulb:
+                selected_bulb.set_color(bulbHSBK, gTransitionTime, rapid=True)
+            else:
+                app.errorBox("Error", "Error. No bulb was selected. Please select a bulb from the pull-down menu (or tick the 'Select All' checkbox) and try again.")
+                app.setCheckBox(START_COLOR_CYCLE, False)
+                is_follow = False
+                return
+        except Exception as e:
+            print ("Ignoring error: ", str(e))
+
+        #Update the GUI the appJar way
+        #app.queueFunction(app.setLabelBg, CYCLE_COLOR, c.hex_l)
+        app.setLabelBg(CYCLE_COLOR, c.hex_l)
+        updateSliders([gCycleHue,gCycleSaturation,65535,3500])
+        
+    else:
+        app.setPollTime(CYCLE_INTERVAL_MS)
+        
+
+        
+def ColorCyclePressed(name):
+    
+    global is_cycle
+    global gCycleDelta
+    global gCycleInterval
+    global gTransitionTime
+    #global gCycleSaturation
+    
+    try:
+        is_cycle = app.getCheckBox(START_COLOR_CYCLE)
+        gCycleInterval = int(app.getEntry(CYCLE_INTERVAL))
+        app.setPollTime(gCycleInterval)
+        gCycleDelta = int(app.getEntry(HUE_DELTA))
+        gTransitionTime = app.getEntry(TRANSITION_TIME2)
+        #gCycleSaturation = int(app.getEntry(CYCLE_SATURATION))%65536
+    except Exception as e:
+        print ("Ignoring error: ", str(e))
+    
+    #print("ColorCyclePressed()")
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------    
 bulbList = ["-None-          "]
 
 app = App("LIFX Controller")
@@ -928,6 +1047,7 @@ app.setFont(size=12, family="Arial")
 
 
 app.setSticky("new")
+app.setStretch("COLUMN")
 
 app.startLabelFrame("", 0, 0)
 app.setSticky("new")
@@ -1063,7 +1183,73 @@ app.setLabelBg("bulbcolor", "gray")
 app.stopLabelFrame()
 
 app.stopLabelFrame()
+app.stopLabelFrame()
+
+#-----------------------------------------------------
+app.setSticky("new")
 #-------------------------------------------
+
+app.startLabelFrame(" ")
+
+app.startTabbedFrame("TabbedFrame")
+#---------------------------------------------------------------------------------------------------------
+app.startTab("Bulbs Details")
+#app.setSticky("news")
+#app.startLabelFrame("Bulb Details")
+#app.setSticky("ew")
+#app.setStretch("both")
+app.addScrolledTextArea("Result")
+app.setTextAreaWidth("Result", 110)
+app.setTextAreaHeight("Result", 22)
+app.setTextArea("Result", test_string)
+#app.stopLabelFrame()
+app.stopTab() #"Bulbs Details"
+#---------------------------------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------------------------------------
+app.startTab("Follow Desktop")
+app.startLabelFrame(FOLLOW_DESKTOP, 0, 0)
+#app.setSticky("n")
+modeList = ["-Select Region-      "]
+modeList.append("Whole Screen")
+modeList.append("Rectangular Region")
+app.setSticky("w")
+app.addCheckBox(FOLLOW_DESKTOP, 0, 0)
+app.setCheckBoxChangeFunction(FOLLOW_DESKTOP, followDesktopPressed)
+app.addOptionBox(DESKTOP_MODE, modeList, 0, 1)
+app.setOptionBoxChangeFunction(DESKTOP_MODE, modeChanged)
+app.setOptionBox(DESKTOP_MODE, "Whole Screen", callFunction=False)
+app.addLabelEntry(TRANSITION_TIME, 0, 2)
+app.setEntryWidth(TRANSITION_TIME, 6)
+app.setEntry(TRANSITION_TIME, TRANSITION_TIME_DEFAULT)
+#app.startLabelFrame("Region Color", 0, 3)
+app.addLabel(REGION_COLOR, "", 1, 0, colspan=5)
+app.setLabel(REGION_COLOR, " Desktop Region's Dominant Color")
+app.setLabelHeight(REGION_COLOR, 1)
+app.setLabelBg(REGION_COLOR, "gray")
+app.hideLabel(REGION_COLOR)
+app.setSticky("e")
+app.addCheckBox(MAX_SATURATION, 0, 3)
+app.addCheckBox(MAX_BRIGHTNESS, 0, 4)
+app.setCheckBoxChangeFunction(MAX_SATURATION, maxPressed)
+app.setCheckBoxChangeFunction(MAX_BRIGHTNESS, maxPressed)
+app.addCheckBox("Evening Mode",0,5)
+#app.hideCheckBox(MAX_SATURATION)
+#app.hideCheckBox(MAX_BRIGHTNESS)
+
+app.setEntryTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
+app.setLabelTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
+app.setCheckBoxTooltip(FOLLOW_DESKTOP, FOLLOW_DESKTOP_TIP)
+app.setOptionBoxTooltip(DESKTOP_MODE, DESKTOP_MODE_TIP)
+
+app.stopLabelFrame() #FOLLOW_DESKTOP
+app.stopTab() #"Follow Desktop"
+#---------------------------------------------------------------------------------------------------------
+
+
+#---------------------------------------------------------------------------------------------------------
+app.startTab("WaveForm")
+#app.addLabel("l3", "Tab 3 Label")
 app.startLabelFrame("Waveform", 1, 1, 5, 1)
 #app.setFrameWidth("Waveform",20)
 #app.setSticky("news")
@@ -1106,61 +1292,57 @@ app.setSticky("ew")
 app.addButton("Execute", press, 5, 0, colspan=3)
 app.setButtonBg("Execute", "cyan")
 
-app.stopLabelFrame()
-#-------------------------------------------
+app.stopLabelFrame() #"WaveForm"
+app.stopTab() #"WaveForm"
+#---------------------------------------------------------------------------------------------------------
 
-
-
-app.stopLabelFrame()
-
-#----------------------------------------------------
-#app.setSticky("news")
-app.startLabelFrame("Bulb Details", 5, 0)
-app.setSticky("ew")
-app.addScrolledTextArea("Result", 0, 0)
-#app.setTextAreaWidth("Result", 45)
-app.setTextAreaHeight("Result", 25)
-app.setTextArea("Result", test_string)
-app.stopLabelFrame()
-#-----------------------------------------------------
-
-#-------------------------------------------
-app.startLabelFrame(FOLLOW_DESKTOP, 2, 0)
-#app.setSticky("n")
-modeList = ["-Select Region-      "]
-modeList.append("Whole Screen")
-modeList.append("Rectangular Region")
+#---------------------------------------------------------------------------------------------------------
+app.startTab(COLOR_CYCLE)
 app.setSticky("w")
-app.addCheckBox(FOLLOW_DESKTOP, 0, 0)
-app.setCheckBoxChangeFunction(FOLLOW_DESKTOP, followDesktopPressed)
-app.addOptionBox(DESKTOP_MODE, modeList, 0, 1)
-app.setOptionBoxChangeFunction(DESKTOP_MODE, modeChanged)
-app.setOptionBox(DESKTOP_MODE, "Whole Screen", callFunction=False)
-app.addLabelEntry(TRANSITION_TIME, 0, 2)
-app.setEntryWidth(TRANSITION_TIME, 6)
-app.setEntry(TRANSITION_TIME, TRANSITION_TIME_DEFAULT)
-#app.startLabelFrame("Region Color", 0, 3)
-app.addLabel(REGION_COLOR, "", 1, 0, colspan=5)
-app.setLabel(REGION_COLOR, " Desktop Region's Dominant Color")
-app.setLabelHeight(REGION_COLOR, 1)
-app.setLabelBg(REGION_COLOR, "gray")
-app.hideLabel(REGION_COLOR)
-app.setSticky("e")
-app.addCheckBox(MAX_SATURATION, 0, 3)
-app.addCheckBox(MAX_BRIGHTNESS, 0, 4)
-app.setCheckBoxChangeFunction(MAX_SATURATION, maxPressed)
-app.setCheckBoxChangeFunction(MAX_BRIGHTNESS, maxPressed)
-app.addCheckBox("Evening Mode",0,5)
-#app.hideCheckBox(MAX_SATURATION)
-#app.hideCheckBox(MAX_BRIGHTNESS)
+app.addCheckBox(START_COLOR_CYCLE)
+app.setCheckBoxChangeFunction(START_COLOR_CYCLE, ColorCyclePressed)
 
-app.setEntryTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
-app.setLabelTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
-app.setCheckBoxTooltip(FOLLOW_DESKTOP, FOLLOW_DESKTOP_TIP)
-app.setOptionBoxTooltip(DESKTOP_MODE, DESKTOP_MODE_TIP)
+app.addLabelEntry(CYCLE_INTERVAL)
+app.addLabelEntry(HUE_DELTA)
 
-app.stopLabelFrame()
-#-------------------------------------------
+app.setEntry(CYCLE_INTERVAL,CYCLE_INTERVAL_MS)
+app.setEntry(HUE_DELTA,CYCLE_HUE_DELTA)
+app.setEntryChangeFunction(CYCLE_INTERVAL, ColorCyclePressed)
+app.setEntryChangeFunction(HUE_DELTA, ColorCyclePressed)
+
+
+
+app.addLabelEntry(TRANSITION_TIME2,)
+#app.addLabelEntry(CYCLE_SATURATION,)
+#app.setEntryChangeFunction(CYCLE_SATURATION, ColorCyclePressed)
+#app.setEntry(CYCLE_SATURATION,65535)
+#app.setEntryWidth(TRANSITION_TIME, 6)
+app.setEntry(TRANSITION_TIME2, TRANSITION_TIME_DEFAULT)
+app.setEntryChangeFunction(TRANSITION_TIME2, ColorCyclePressed)
+app.setEntryTooltip(TRANSITION_TIME2, TRANSITION_TIME_TIP)
+app.setLabelTooltip(TRANSITION_TIME2, TRANSITION_TIME_TIP)
+app.setEntryTooltip(HUE_DELTA, HUE_DELTA_TIP)
+app.setLabelTooltip(HUE_DELTA, HUE_DELTA_TIP)
+app.setEntryTooltip(CYCLE_INTERVAL, CYCLE_INTERVAL_TIP)
+app.setLabelTooltip(CYCLE_INTERVAL, CYCLE_INTERVAL_TIP)
+#app.setLabelTooltip(CYCLE_SATURATION, CYCLE_SATURATION_TIP)
+
+
+app.setSticky("ew")
+
+app.addLabel(CYCLE_COLOR, "COLOR")
+
+
+app.registerEvent(ColorCycle)
+app.setPollTime(int(CYCLE_INTERVAL_MS))
+
+
+app.stopTab() #COLOR_CYCLE
+#---------------------------------------------------------------------------------------------------------
+app.stopTabbedFrame()
+
+app.stopLabelFrame()# " "
+
 
 if not os.path.exists(CONFIG):
     print("Creating .ini file")
