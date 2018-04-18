@@ -265,6 +265,10 @@ def updateSliders(hsbk):
     #print("s:",hsbk[1])
     #print("b:",hsbk[2])
     #print("k:",hsbk[3])
+    global gCycleHue
+    global gCycleSaturation 
+    global gCycleBrightness
+    global gCycleKelvin
 
     app.setSpinBox("hueSpin", int(hsbk[0]), callFunction=False)
     app.setSpinBox("satSpin", int(hsbk[1]), callFunction=False)
@@ -279,7 +283,10 @@ def updateSliders(hsbk):
     c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
     #print("c:",c)
     app.setLabelBg("bulbcolor", c.hex_l)
-    
+    gCycleHue = hsbk[0]
+    gCycleSaturation = hsbk[1]
+    gCycleBrightness = hsbk[2]
+    gCycleKelvin = hsbk[3]
 
 def RGBtoHSBK (RGB, temperature = 3500):
     cmax = max(RGB)
