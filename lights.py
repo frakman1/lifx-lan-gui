@@ -50,6 +50,7 @@ FOLLOW_DESKTOP_TIP = "Make your bulbs' color match your desktop"
 DESKTOP_MODE_TIP = "Select between following the whole desktop screen or just a small portion of it (useful for letterbox movies)"
 HUE_DELTA_TIP = "The amount the hue will change every interval (between 0 and 65535)"
 CYCLE_INTERVAL_TIP = "The time (in ms) between each update"
+CYCLE_SATURATION_TIP = "How saturated you want the hue to be (between 0 and 65535)"
 EXPECTED_BULBS = 0
 TRANSITION_TIME_DEFAULT = 400
 CONFIG = "lights.ini"
@@ -73,6 +74,8 @@ HUE_DELTA = "Hue Delta"
 START_COLOR_CYCLE = "Start Color Cycle"
 CYCLE_COLOR = "CycleColor"
 TRANSITION_TIME2 = "Transition Time (ms)"
+CYCLE_SATURATION = "Saturation"
+
 CYCLE_HUE_DELTA = 600
 CYCLE_INTERVAL_MS = 2000
 alreadyDone = False
@@ -105,6 +108,9 @@ gCycleHue = 0
 gCycleInterval = CYCLE_INTERVAL_MS
 gCycleDelta = CYCLE_HUE_DELTA
 gTransitionTime = TRANSITION_TIME_DEFAULT
+gCycleSaturation = 65535
+gCycleBrightness = 65535
+gCycleKelvin = 3500
 
 class App(aJ.gui):
     def __init__(self, *args, **kwargs):
@@ -291,10 +297,21 @@ def RGBtoHSBK (RGB, temperature = 3500):
 
 # function to convert the scale values to an RGB hex code
 def getHSB():
+
+    global gCycleHue 
+    global gCycleSaturation
+    global gCycleBrightness
+    global gCycleKelvin
+    
     H = app.getScale("hueScale")
     S = app.getScale("satScale")
     B = app.getScale("briScale")
     K = app.getScale("kelScale")
+    
+    gCycleHue = H
+    gCycleSaturation = S
+    gCycleBrightness = B
+    gCycleKelvin = K
 
     #RGB = "#"+str(R)+str(G)+str(B)
 
@@ -543,6 +560,10 @@ def press(name):
     global lan
     global gwaveformcolor
     global selected_bulb
+    global gCycleHue
+    global gCycleBrightness
+    global gCycleSaturation
+    
 
     #print(name, "button pressed")
 
@@ -647,6 +668,10 @@ def press(name):
         hsv = rgb_to_hsv(c.red, c.green, c.blue)
         #print("hsv:",hsv)
         bulbHSBK = [hsv[0] * 65535.0,hsv[1] * 65535.0,hsv[2] * 65535.0,3500]
+        gCycleHue = bulbHSBK[0]
+        gCycleSaturation = bulbHSBK[1]
+        gCycleBrightness = bulbHSBK[2]
+        
         #print ("bulbHSBK:",bulbHSBK)
         if gSelectAll:
             lan.set_color_all_lights(bulbHSBK, duration=0, rapid=False)
@@ -924,14 +949,17 @@ def ColorCycle():
     global selected_bulb
     global lan
     global gTransitionTime
-    
+    global gCycleSaturation
+    global gCycleBrightness
+    global gCycleKelvin
+
     
     #print("is_cycle:", is_cycle, " gCycleInterval:", gCycleInterval, "gCycleDelta:", gCycleDelta, "gCycleHue:", gCycleHue)
     if is_cycle:
 
         gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
-        bulbHSBK = [gCycleHue, 65535, 65535, 3500]
-        rgb1 = hsv_to_rgb(gCycleHue/65535, 1, 1);#print("rgb1:",rgb1)
+        bulbHSBK = [gCycleHue, gCycleSaturation, gCycleBrightness, gCycleKelvin]
+        rgb1 = hsv_to_rgb(gCycleHue/65535, gCycleSaturation/65535, gCycleBrightness/65535);#print("rgb1:",rgb1)
         c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
         
         
@@ -951,6 +979,7 @@ def ColorCycle():
         #Update the GUI the appJar way
         #app.queueFunction(app.setLabelBg, CYCLE_COLOR, c.hex_l)
         app.setLabelBg(CYCLE_COLOR, c.hex_l)
+        updateSliders([gCycleHue,gCycleSaturation,65535,3500])
         
     else:
         app.setPollTime(CYCLE_INTERVAL_MS)
@@ -963,6 +992,7 @@ def ColorCyclePressed(name):
     global gCycleDelta
     global gCycleInterval
     global gTransitionTime
+    global gCycleSaturation
     
     try:
         is_cycle = app.getCheckBox(START_COLOR_CYCLE)
@@ -970,6 +1000,7 @@ def ColorCyclePressed(name):
         app.setPollTime(gCycleInterval)
         gCycleDelta = int(app.getEntry(HUE_DELTA))
         gTransitionTime = app.getEntry(TRANSITION_TIME2)
+        #gCycleSaturation = int(app.getEntry(CYCLE_SATURATION))%65536
     except Exception as e:
         print ("Ignoring error: ", str(e))
     
@@ -1251,7 +1282,11 @@ app.setEntryChangeFunction(CYCLE_INTERVAL, ColorCyclePressed)
 app.setEntryChangeFunction(HUE_DELTA, ColorCyclePressed)
 
 
+
 app.addLabelEntry(TRANSITION_TIME2,)
+#app.addLabelEntry(CYCLE_SATURATION,)
+#app.setEntryChangeFunction(CYCLE_SATURATION, ColorCyclePressed)
+#app.setEntry(CYCLE_SATURATION,65535)
 #app.setEntryWidth(TRANSITION_TIME, 6)
 app.setEntry(TRANSITION_TIME2, TRANSITION_TIME_DEFAULT)
 app.setEntryChangeFunction(TRANSITION_TIME2, ColorCyclePressed)
@@ -1261,6 +1296,8 @@ app.setEntryTooltip(HUE_DELTA, HUE_DELTA_TIP)
 app.setLabelTooltip(HUE_DELTA, HUE_DELTA_TIP)
 app.setEntryTooltip(CYCLE_INTERVAL, CYCLE_INTERVAL_TIP)
 app.setLabelTooltip(CYCLE_INTERVAL, CYCLE_INTERVAL_TIP)
+#app.setLabelTooltip(CYCLE_SATURATION, CYCLE_SATURATION_TIP)
+
 
 app.setSticky("ew")
 
