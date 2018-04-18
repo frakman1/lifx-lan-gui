@@ -259,6 +259,12 @@ def updateSliders(hsbk):
     app.setScale("satScale", int(hsbk[1]), callFunction=False)
     app.setScale("briScale", int(hsbk[2]), callFunction=False)
     app.setScale("kelScale", int(hsbk[3]), callFunction=False)
+    
+    rgb1 = hsv_to_rgb((hsbk[0]/65535), (hsbk[1]/65535), (hsbk[2]/65535));#print("rgb1:",rgb1)
+    c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
+    #print("c:",c)
+    app.setLabelBg("bulbcolor", c.hex_l)
+    
 
 def RGBtoHSBK (RGB, temperature = 3500):
     cmax = max(RGB)
@@ -308,10 +314,10 @@ def getHSB():
     B = app.getScale("briScale")
     K = app.getScale("kelScale")
     
-    gCycleHue = H
-    gCycleSaturation = S
-    gCycleBrightness = B
-    gCycleKelvin = K
+    gCycleHue = int(H)
+    gCycleSaturation = int(S)
+    gCycleBrightness = int(B)
+    gCycleKelvin = int(K)
 
     #RGB = "#"+str(R)+str(G)+str(B)
 
@@ -362,16 +368,23 @@ def updateHSB(name):
     global selected_bulb
     bulbHSBK = [HSB["H"],HSB["S"],HSB["B"],k]
     #print ("bulbHSBK:",bulbHSBK)
-
-    if gSelectAll:
-        lan.set_color_all_lights(bulbHSBK, duration=0, rapid=False)
-
-    elif selected_bulb:
-        #print("sending color",hsv)
-        selected_bulb.set_color(bulbHSBK, duration=0, rapid=False)
+    app.thread(updateBulbs, bulbHSBK )
 
     #app.setEntry("colCode", RGB)
 
+def updateBulbs(bulbHSBK):
+    try:
+        
+        if gSelectAll:
+            lan.set_color_all_lights(bulbHSBK, duration=0, rapid=False)
+
+        elif selected_bulb:
+            #print("sending color",hsv)
+            selected_bulb.set_color(bulbHSBK, duration=0, rapid=False)
+    
+    except Exception as e:
+        print ("Ignoring error: ", str(e))
+    
 
 def selectAllPressed (name):
     global bulbs
@@ -673,6 +686,7 @@ def press(name):
         gCycleBrightness = bulbHSBK[2]
         
         #print ("bulbHSBK:",bulbHSBK)
+        updateBulbs(bulbHSBK)
         if gSelectAll:
             lan.set_color_all_lights(bulbHSBK, duration=0, rapid=False)
         elif selected_bulb:
@@ -992,7 +1006,7 @@ def ColorCyclePressed(name):
     global gCycleDelta
     global gCycleInterval
     global gTransitionTime
-    global gCycleSaturation
+    #global gCycleSaturation
     
     try:
         is_cycle = app.getCheckBox(START_COLOR_CYCLE)
@@ -1004,7 +1018,7 @@ def ColorCyclePressed(name):
     except Exception as e:
         print ("Ignoring error: ", str(e))
     
-    print("ColorCyclePressed()")
+    #print("ColorCyclePressed()")
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------    
 bulbList = ["-None-          "]
