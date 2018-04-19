@@ -995,8 +995,8 @@ def ColorCycle():
 
         gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
         bulbHSBK = [gCycleHue, gCycleSaturation, gCycleBrightness, gCycleKelvin]
-        rgb1 = hsv_to_rgb(gCycleHue/65535, gCycleSaturation/65535, gCycleBrightness/65535);#print("rgb1:",rgb1)
-        c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
+        #rgb1 = hsv_to_rgb(gCycleHue/65535, gCycleSaturation/65535, gCycleBrightness/65535);#print("rgb1:",rgb1)
+        #c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
         
         
         try:
@@ -1014,7 +1014,7 @@ def ColorCycle():
 
         #Update the GUI the appJar way
         #app.queueFunction(app.setLabelBg, CYCLE_COLOR, c.hex_l)
-        app.setLabelBg(CYCLE_COLOR, c.hex_l)
+        #app.setLabelBg(CYCLE_COLOR, c.hex_l)
         updateSliders([gCycleHue,gCycleSaturation,65535,3500])
         
     else:
@@ -1308,6 +1308,7 @@ app.startTab(COLOR_CYCLE)
 app.setSticky("w")
 app.addCheckBox(START_COLOR_CYCLE)
 app.setCheckBoxChangeFunction(START_COLOR_CYCLE, ColorCyclePressed)
+app.setSticky("e")
 
 app.addLabelEntry(CYCLE_INTERVAL)
 app.addLabelEntry(HUE_DELTA)
@@ -1337,7 +1338,7 @@ app.setLabelTooltip(CYCLE_INTERVAL, CYCLE_INTERVAL_TIP)
 
 app.setSticky("ew")
 
-app.addLabel(CYCLE_COLOR, "COLOR")
+#app.addLabel(CYCLE_COLOR, "")
 
 
 app.registerEvent(ColorCycle)
