@@ -98,6 +98,7 @@ CYCLE_COLOR = "CycleColor"
 CYCLE_HUE_DELTA = 600
 CYCLE_INTERVAL_MS = 2000
 
+original_colors = {}
 config = {}
 bulbs = []
 selected_bulb = 0
@@ -987,9 +988,10 @@ def ColorCycle():
     global gCycleSaturation
     global gCycleBrightness
     global gCycleKelvin
+    global original_colors
 
     
-    #print("is_cycle:", is_cycle, " gCycleInterval:", gCycleInterval, "gCycleDelta:", gCycleDelta, "gCycleHue:", gCycleHue)
+    #print("is_cycle:", is_cycle, " gCycleInterval:", gCycleInterval, "gCycleDelta:", gCycleDelta, "gCycleHue:", gCycleHue, "originalColors:", original_colors)
     if is_cycle:
 
         gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
@@ -1000,9 +1002,28 @@ def ColorCycle():
         
         try:
             if gSelectAll:
-                lan.set_color_all_lights(bulbHSBK,gTransitionTime, rapid=True)
+                #lan.set_color_all_lights(bulbHSBK,gTransitionTime, rapid=True)
+                #print("------------------------------------------------")
+                for light in original_colors:
+                    #light.set_color(original_colors[light])
+                    #t = original_colors[light] ; print("Before t:", t, "type(t)", type(t))
+                    newHue = (int(original_colors[light][0]) + int(gCycleDelta)) % 65535
+                    #print("newHue:",newHue)
+                    #original_colors[light][0]=newHue
+                    original_colors[light] = (newHue, original_colors[light][1], original_colors[light][2], original_colors[light][3])
+                    #t = original_colors[light] ; print("After t:", t, "type(t)", type(t))
+                    
+                    bulbHSBK = [newHue, original_colors[light][1], original_colors[light][2], original_colors[light][3]]
+                    
+                    #print (bulbHSBK)
+                    light.set_color(bulbHSBK, gTransitionTime, rapid=True)
+                    #print("------------------------------------------------")
+                    
+                
             elif selected_bulb:
                 selected_bulb.set_color(bulbHSBK, gTransitionTime, rapid=True)
+                updateSliders([gCycleHue,gCycleSaturation,gCycleBrightness,gCycleKelvin])
+                
             else:
                 app.errorBox("Error", "Error. No bulb was selected. Please select a bulb from the pull-down menu (or tick the 'Select All' checkbox) and try again.")
                 app.setCheckBox(START_COLOR_CYCLE, False)
@@ -1014,7 +1035,6 @@ def ColorCycle():
         #Update the GUI the appJar way
         #app.queueFunction(app.setLabelBg, CYCLE_COLOR, c.hex_l)
         #app.setLabelBg(CYCLE_COLOR, c.hex_l)
-        updateSliders([gCycleHue,gCycleSaturation,gCycleBrightness,gCycleKelvin])
         
     else:
         app.setPollTime(CYCLE_INTERVAL_MS)
@@ -1027,30 +1047,35 @@ def ColorCyclePressed(name):
     global gCycleDelta
     global gCycleInterval
     global gTransitionTime
+    global original_colors
+    global lan
     
-    print("-------------------------\n",function_name(), "() name: ", name)
+    #print("-------------------------\n",function_name(), "() name: ", name)
     
     if name==START_COLOR_CYCLE:
         is_cycle = app.getCheckBox(START_COLOR_CYCLE)
+        original_colors = lan.get_color_all_lights()
+        app.setPollTime(gCycleInterval)
+        #for light in original_colors:
+        #    original_colors[light] = original_colors[light] + (original_colors[light][0],)
+            
         return
     
 
     #global gCycleSaturation
     is_scale = (name[-5:]=="Scale")
-    print("is_scale: ",is_scale)
+    #print("is_scale: ",is_scale)
     
-    
-
     
     try:
         # depending on the type, get & set...
         if is_scale:
             value = app.getScale(name)
-            print("scale value:", value)
+            #print("scale value:", value)
             app.setEntry(name[:-5], value, callFunction = False)
         else:
             value = app.getEntry(name)
-            print("entry value:", value)
+            #print("entry value:", value)
             app.setScale(name + SCALE, value, callFunction = False)
             
             
@@ -1061,6 +1086,7 @@ def ColorCyclePressed(name):
         gCycleDelta = int(app.getEntry(HUE_DELTA))
         gTransitionTime = app.getEntry(TRANSITION_TIME2)
         #gCycleSaturation = int(app.getEntry(CYCLE_SATURATION))%65536
+        #print( "type: ", type(original_colors))
     except Exception as e:
         print ("Ignoring error: ", str(e))
     
@@ -1340,7 +1366,7 @@ app.setSticky("w")
 app.addLabelEntry(CYCLE_INTERVAL, 1, 0); 
 app.setEntryWidth(CYCLE_INTERVAL, 5)
 app.addScale(CYCLE_INTERVAL_SCALE, 1, 1)
-app.setScaleRange(CYCLE_INTERVAL_SCALE, 0, 2000)
+app.setScaleRange(CYCLE_INTERVAL_SCALE, 100, 2000)
 
 
 
@@ -1360,15 +1386,15 @@ app.setScaleRange(TRANSITION_TIME2_SCALE, 0, 2000)
 #app.setEntryChangeFunction(CYCLE_SATURATION, ColorCyclePressed)
 #app.setEntry(CYCLE_SATURATION,65535)
 #app.setEntryWidth(TRANSITION_TIME, 6)
-app.setEntry(CYCLE_INTERVAL,CYCLE_INTERVAL_MS)
-app.setEntry(HUE_DELTA,CYCLE_HUE_DELTA)
-app.setEntry(TRANSITION_TIME2, TRANSITION_TIME_DEFAULT)
 app.setEntryChangeFunction(CYCLE_INTERVAL, ColorCyclePressed)
 app.setEntryChangeFunction(HUE_DELTA, ColorCyclePressed)
 app.setEntryChangeFunction(TRANSITION_TIME2, ColorCyclePressed)
 app.setScaleChangeFunction(CYCLE_INTERVAL_SCALE, ColorCyclePressed)
 app.setScaleChangeFunction(HUE_DELTA_SCALE, ColorCyclePressed)
 app.setScaleChangeFunction(TRANSITION_TIME2_SCALE, ColorCyclePressed)
+app.setEntry(CYCLE_INTERVAL,CYCLE_INTERVAL_MS)
+app.setEntry(HUE_DELTA,CYCLE_HUE_DELTA)
+app.setEntry(TRANSITION_TIME2, TRANSITION_TIME_DEFAULT)
 
 
 app.setEntryTooltip(TRANSITION_TIME2, TRANSITION_TIME_TIP)
@@ -1378,7 +1404,6 @@ app.setLabelTooltip(HUE_DELTA, HUE_DELTA_TIP)
 app.setEntryTooltip(CYCLE_INTERVAL, CYCLE_INTERVAL_TIP)
 app.setLabelTooltip(CYCLE_INTERVAL, CYCLE_INTERVAL_TIP)
 #app.setLabelTooltip(CYCLE_SATURATION, CYCLE_SATURATION_TIP)
-
 
 app.setSticky("ew")
 
