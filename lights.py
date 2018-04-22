@@ -85,15 +85,19 @@ MAX_SATURATION = "Max Saturation"
 MAX_BRIGHTNESS = "Max Brightness"
 COLOR_CYCLE = "Color Cycle"
 CYCLE_INTERVAL = "Update Interval(ms)" #update interval
+SCALE = "Scale"
+CYCLE_INTERVAL_SCALE = CYCLE_INTERVAL + SCALE
 HUE_DELTA = "Hue Delta"
+HUE_DELTA_SCALE = HUE_DELTA + SCALE
+TRANSITION_TIME2 = "Transition Time (ms)"
+TRANSITION_TIME2_SCALE = TRANSITION_TIME2 + SCALE
 START_COLOR_CYCLE = "Start Color Cycle"
 CYCLE_COLOR = "CycleColor"
-TRANSITION_TIME2 = "Transition Time (ms)"
-CYCLE_SATURATION = "Saturation"
+
 
 CYCLE_HUE_DELTA = 600
 CYCLE_INTERVAL_MS = 2000
-alreadyDone = False
+
 config = {}
 bulbs = []
 selected_bulb = 0
@@ -324,7 +328,7 @@ def RGBtoHSBK (RGB, temperature = 3500):
 
 
 # function to convert the scale values to an RGB hex code
-def getHSB():
+def getHSBK():
 
     global gCycleHue 
     global gCycleSaturation
@@ -350,19 +354,14 @@ def getHSB():
 def updateHSB(name):
     # this stops the changes in slider/spin from constantly calling each other
     #print ("name:",name)
-    global alreadyDone
-    if alreadyDone:
-        alreadyDone = False
-        return
-    else:
-        alreadyDone = True
+
 
     # split the widget's name into the type & colour
     colour = name[0:3]
     widg = name[3:]
 
     # get the current RGB value
-    HSB = getHSB()
+    HSBK = getHSBK()
     #print("HSB:",HSB,"type(HSB)",type(HSB))
     #print("H",HSB["H"])
     #print("S",HSB["S"])
@@ -371,16 +370,16 @@ def updateHSB(name):
     # depending on the type, get & set...
     if widg == "Scale":
         value = app.getScale(name)
-        app.setSpinBox(colour + "Spin", value)
+        app.setSpinBox(colour + "Spin", value, callFunction = False)
     elif widg == "Spin":
         value = app.getSpinBox(name)
-        app.setScale(colour + "Scale", value)
+        app.setScale(colour + "Scale", value, callFunction = False)
 
     # update the label
-    h = HSB["H"] / 65535.0;#print("h:",h)
-    s = HSB["S"] / 65535.0;#print("s:",s)
-    v = HSB["B"] / 65535.0;#print("v:",v)
-    k = HSB["K"];#print("v:",v)
+    h = HSBK["H"] / 65535.0;#print("h:",h)
+    s = HSBK["S"] / 65535.0;#print("s:",s)
+    v = HSBK["B"] / 65535.0;#print("v:",v)
+    k = HSBK["K"];#print("v:",v)
 
     rgb1 = hsv_to_rgb(h, s, v);#print("rgb1:",rgb1)
     c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
@@ -388,7 +387,7 @@ def updateHSB(name):
     app.setLabelBg("bulbcolor", c.hex_l)
 
     global selected_bulb
-    bulbHSBK = [HSB["H"],HSB["S"],HSB["B"],k]
+    bulbHSBK = [HSBK["H"],HSBK["S"],HSBK["B"],HSBK["K"]]
     #print ("bulbHSBK:",bulbHSBK)
     app.thread(updateBulbs, bulbHSBK )
 
@@ -1015,7 +1014,7 @@ def ColorCycle():
         #Update the GUI the appJar way
         #app.queueFunction(app.setLabelBg, CYCLE_COLOR, c.hex_l)
         #app.setLabelBg(CYCLE_COLOR, c.hex_l)
-        updateSliders([gCycleHue,gCycleSaturation,65535,3500])
+        updateSliders([gCycleHue,gCycleSaturation,gCycleBrightness,gCycleKelvin])
         
     else:
         app.setPollTime(CYCLE_INTERVAL_MS)
@@ -1028,9 +1027,34 @@ def ColorCyclePressed(name):
     global gCycleDelta
     global gCycleInterval
     global gTransitionTime
+    
+    print("-------------------------\n",function_name(), "() name: ", name)
+    
+    if name==START_COLOR_CYCLE:
+        is_cycle = app.getCheckBox(START_COLOR_CYCLE)
+        return
+    
+
     #global gCycleSaturation
+    is_scale = (name[-5:]=="Scale")
+    print("is_scale: ",is_scale)
+    
+    
+
     
     try:
+        # depending on the type, get & set...
+        if is_scale:
+            value = app.getScale(name)
+            print("scale value:", value)
+            app.setEntry(name[:-5], value, callFunction = False)
+        else:
+            value = app.getEntry(name)
+            print("entry value:", value)
+            app.setScale(name + SCALE, value, callFunction = False)
+            
+            
+            
         is_cycle = app.getCheckBox(START_COLOR_CYCLE)
         gCycleInterval = int(app.getEntry(CYCLE_INTERVAL))
         app.setPollTime(gCycleInterval)
@@ -1041,6 +1065,9 @@ def ColorCyclePressed(name):
         print ("Ignoring error: ", str(e))
     
     #print("ColorCyclePressed()")
+
+def function_name():
+    return sys._getframe().f_back.f_code.co_name    
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------    
 bulbList = ["-None-          "]
@@ -1308,25 +1335,42 @@ app.startTab(COLOR_CYCLE)
 app.setSticky("w")
 app.addCheckBox(START_COLOR_CYCLE)
 app.setCheckBoxChangeFunction(START_COLOR_CYCLE, ColorCyclePressed)
-app.setSticky("e")
+app.setSticky("w")
 
-app.addLabelEntry(CYCLE_INTERVAL)
-app.addLabelEntry(HUE_DELTA)
-
-app.setEntry(CYCLE_INTERVAL,CYCLE_INTERVAL_MS)
-app.setEntry(HUE_DELTA,CYCLE_HUE_DELTA)
-app.setEntryChangeFunction(CYCLE_INTERVAL, ColorCyclePressed)
-app.setEntryChangeFunction(HUE_DELTA, ColorCyclePressed)
+app.addLabelEntry(CYCLE_INTERVAL, 1, 0); 
+app.setEntryWidth(CYCLE_INTERVAL, 5)
+app.addScale(CYCLE_INTERVAL_SCALE, 1, 1)
+app.setScaleRange(CYCLE_INTERVAL_SCALE, 0, 2000)
 
 
 
-app.addLabelEntry(TRANSITION_TIME2,)
+app.addLabelEntry(HUE_DELTA, 2, 0)
+app.setEntryWidth(HUE_DELTA, 5)
+app.addScale(HUE_DELTA_SCALE, 2, 1)
+app.setScaleRange(HUE_DELTA_SCALE, 1, 65534)
+
+
+app.addLabelEntry(TRANSITION_TIME2, 3, 0)
+app.setEntryWidth(TRANSITION_TIME2, 5)
+app.addScale(TRANSITION_TIME2_SCALE, 3, 1)
+app.setScaleRange(TRANSITION_TIME2_SCALE, 0, 2000)
+
+
 #app.addLabelEntry(CYCLE_SATURATION,)
 #app.setEntryChangeFunction(CYCLE_SATURATION, ColorCyclePressed)
 #app.setEntry(CYCLE_SATURATION,65535)
 #app.setEntryWidth(TRANSITION_TIME, 6)
+app.setEntry(CYCLE_INTERVAL,CYCLE_INTERVAL_MS)
+app.setEntry(HUE_DELTA,CYCLE_HUE_DELTA)
 app.setEntry(TRANSITION_TIME2, TRANSITION_TIME_DEFAULT)
+app.setEntryChangeFunction(CYCLE_INTERVAL, ColorCyclePressed)
+app.setEntryChangeFunction(HUE_DELTA, ColorCyclePressed)
 app.setEntryChangeFunction(TRANSITION_TIME2, ColorCyclePressed)
+app.setScaleChangeFunction(CYCLE_INTERVAL_SCALE, ColorCyclePressed)
+app.setScaleChangeFunction(HUE_DELTA_SCALE, ColorCyclePressed)
+app.setScaleChangeFunction(TRANSITION_TIME2_SCALE, ColorCyclePressed)
+
+
 app.setEntryTooltip(TRANSITION_TIME2, TRANSITION_TIME_TIP)
 app.setLabelTooltip(TRANSITION_TIME2, TRANSITION_TIME_TIP)
 app.setEntryTooltip(HUE_DELTA, HUE_DELTA_TIP)
