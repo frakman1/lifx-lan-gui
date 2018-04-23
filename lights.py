@@ -38,14 +38,31 @@ if (myos == 'Windows'):
 elif (myos == 'Darwin') or (myos == 'Linux') :
     mygreen = 'green'
 
-def resource_path(relative_path):
+def abs_resource_path(relative_path):
     if (myos == 'Windows'):
         """ Get absolute path to resource, works for dev and for PyInstaller """
         try:
             # PyInstaller creates a temp folder and stores path in _MEIPASS
             base_path = os.path.abspath(".")
         except Exception:
+            print("Error finding path")
+        
+        return os.path.join(base_path, relative_path)
+
+    elif (myos == 'Darwin') or (myos == 'Linux') :
+        """ Get absolute path to resource, works for dev and for PyInstaller """
+        base_path =  os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(base_path, relative_path)
+   	
+	
+def resource_path(relative_path):
+    if (myos == 'Windows'):
+        """ Get absolute path to resource, works for dev and for PyInstaller """
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
             base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.abspath(".")
         
         return os.path.join(base_path, relative_path)
 
@@ -68,14 +85,14 @@ CYCLE_INTERVAL_TIP = "The time (in ms) between each update"
 CYCLE_SATURATION_TIP = "How saturated you want the hue to be (between 0 and 65535)"
 EXPECTED_BULBS = 0
 TRANSITION_TIME_DEFAULT = 400
-CONFIG = resource_path("lights.ini")
-PICKLE = resource_path("lifxList.pkl")
-SCENE1_C = resource_path("scene1_c.pkl")
-SCENE1_P = resource_path("scene1_p.pkl")
-SCENE2_C = resource_path("scene2_c.pkl")
-SCENE2_P = resource_path("scene2_p.pkl")
-SCENE3_C = resource_path("scene3_c.pkl")
-SCENE3_P = resource_path("scene3_p.pkl")
+CONFIG = abs_resource_path("lights.ini")
+PICKLE = abs_resource_path("lifxList.pkl")
+SCENE1_C = abs_resource_path("scene1_c.pkl")
+SCENE1_P = abs_resource_path("scene1_p.pkl")
+SCENE2_C = abs_resource_path("scene2_c.pkl")
+SCENE2_P = abs_resource_path("scene2_p.pkl")
+SCENE3_C = abs_resource_path("scene3_c.pkl")
+SCENE3_P = abs_resource_path("scene3_p.pkl")
 CYCLES = "Cycles"
 TRANSITION_TIME = "Transition Time(ms)"
 FOLLOW_DESKTOP = "Start Following Desktop"
