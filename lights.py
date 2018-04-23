@@ -78,7 +78,7 @@ SCENE3_C = resource_path("scene3_c.pkl")
 SCENE3_P = resource_path("scene3_p.pkl")
 CYCLES = "Cycles"
 TRANSITION_TIME = "Transition Time(ms)"
-FOLLOW_DESKTOP = "Follow Desktop"
+FOLLOW_DESKTOP = "Start Following Desktop"
 DESKTOP_MODE = "Desktop Mode"
 REGION_COLOR = "regioncolor"
 MAX_SATURATION = "Max Saturation"
@@ -976,6 +976,7 @@ def followDesktopPressed(name):
 
         app.thread(followDesktop)
 
+# This function gets run continuously every 2 seconds until activated, then it runs more frequently as set by user.
 
 def ColorCycle():
     global is_cycle
@@ -994,8 +995,6 @@ def ColorCycle():
     #print("is_cycle:", is_cycle, " gCycleInterval:", gCycleInterval, "gCycleDelta:", gCycleDelta, "gCycleHue:", gCycleHue, "originalColors:", original_colors)
     if is_cycle:
 
-        gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
-        bulbHSBK = [gCycleHue, gCycleSaturation, gCycleBrightness, gCycleKelvin]
         #rgb1 = hsv_to_rgb(gCycleHue/65535, gCycleSaturation/65535, gCycleBrightness/65535);#print("rgb1:",rgb1)
         #c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
         
@@ -1005,24 +1004,22 @@ def ColorCycle():
                 #lan.set_color_all_lights(bulbHSBK,gTransitionTime, rapid=True)
                 #print("------------------------------------------------")
                 for light in original_colors:
-                    #light.set_color(original_colors[light])
-                    #t = original_colors[light] ; print("Before t:", t, "type(t)", type(t))
                     newHue = (int(original_colors[light][0]) + int(gCycleDelta)) % 65535
                     #print("newHue:",newHue)
-                    #original_colors[light][0]=newHue
                     original_colors[light] = (newHue, original_colors[light][1], original_colors[light][2], original_colors[light][3])
-                    #t = original_colors[light] ; print("After t:", t, "type(t)", type(t))
-                    
                     bulbHSBK = [newHue, original_colors[light][1], original_colors[light][2], original_colors[light][3]]
-                    
                     #print (bulbHSBK)
                     light.set_color(bulbHSBK, gTransitionTime, rapid=True)
                     #print("------------------------------------------------")
                     
                 
             elif selected_bulb:
+                gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
+                bulbHSBK = [gCycleHue, gCycleSaturation, gCycleBrightness, gCycleKelvin]
                 selected_bulb.set_color(bulbHSBK, gTransitionTime, rapid=True)
-                updateSliders([gCycleHue,gCycleSaturation,gCycleBrightness,gCycleKelvin])
+                updateSliders([gCycleHue, gCycleSaturation, gCycleBrightness, gCycleKelvin])
+                #app.setLabelBg(CYCLE_COLOR, c.hex_l)
+                
                 
             else:
                 app.errorBox("Error", "Error. No bulb was selected. Please select a bulb from the pull-down menu (or tick the 'Select All' checkbox) and try again.")
@@ -1078,8 +1075,6 @@ def ColorCyclePressed(name):
             #print("entry value:", value)
             app.setScale(name + SCALE, value, callFunction = False)
             
-            
-            
         is_cycle = app.getCheckBox(START_COLOR_CYCLE)
         gCycleInterval = int(app.getEntry(CYCLE_INTERVAL))
         app.setPollTime(gCycleInterval)
@@ -1131,7 +1126,6 @@ app.setLabelBg("lbl2", "white")
 app.addNamedCheckBox("Select All Bulbs", "Select All", 1, 2)
 app.setCheckBoxChangeFunction("Select All", selectAllPressed)
 
-
 app.addOptionBox("LIFX Bulbs", bulbList, 1, 1)
 app.setOptionBoxChangeFunction("LIFX Bulbs", listChanged)
 app.setSticky("n")
@@ -1146,28 +1140,12 @@ app.setButton( "Light", "Toggle Selected" )
 
 #app.hideButton("Light")
 
-app.stopLabelFrame()
-#-------------------------------------------------------------------------------
-app.startLabelFrame("Scenes", 0, 1)
-app.setSticky("news")
-app.addEntry("Scene 1", 0, 0)
-app.setEntryChangeFunction("Scene 1", SceneNameChanged)
-app.addNamedButton("Save", "Save Scene 1", Scene, 0, 1)
-app.addNamedButton("Restore", "Restore Scene 1", Scene, 0, 2)
-app.addEntry("Scene 2", 1, 0)
-app.setEntryChangeFunction("Scene 2", SceneNameChanged)
-app.addNamedButton("Save", "Save Scene 2", Scene, 1, 1)
-app.addNamedButton("Restore", "Restore Scene 2", Scene, 1, 2)
-app.addEntry("Scene 3", 2, 0)
-app.setEntryChangeFunction("Scene 3", SceneNameChanged)
-app.addNamedButton("Save", "Save Scene 3", Scene, 2, 1)
-app.addNamedButton("Restore", "Restore Scene 3", Scene, 2, 2)
-app.stopLabelFrame()
-#-------------------------------------------------------------------------------
+app.stopLabelFrame() #Find
+
 #app.setButtonImage("picker", resource_path("colorpicker.gif"), align=None)
 ###
 app.setSticky("ne")
-app.startLabelFrame("All LAN Bulbs", 0, 2)
+app.startLabelFrame("All LAN Bulbs", 0, 1)
 app.setSticky("new")
 app.addButton("All Off", press, 2, 2)
 app.addButton("All On", press, 3, 2)
@@ -1175,7 +1153,7 @@ app.addButton("All White", press, 4, 2)
 app.addButton("All Rainbow", rainbow_press, 5, 2)
 app.addButton("All Random", press, 6, 2)
 #app.addButton("All Waveform", rainbow_press,6,2)
-app.stopLabelFrame()
+app.stopLabelFrame() #"All LAN Bulbs"
 
 #-------------------------------------------
 app.setSticky("sew")
@@ -1240,10 +1218,10 @@ app.setLabel("bulbcolor", " ")
 app.setLabelHeight("bulbcolor", 5)
 app.setLabelWidth("bulbcolor", 10)
 app.setLabelBg("bulbcolor", "gray")
-app.stopLabelFrame()
+app.stopLabelFrame() # "Bulbs Color"
 
-app.stopLabelFrame()
-app.stopLabelFrame()
+app.stopLabelFrame() # "HSBK Values"
+app.stopLabelFrame() # topmost 
 
 #-----------------------------------------------------
 app.setSticky("new")
@@ -1259,8 +1237,8 @@ app.startTab("Bulbs Details")
 #app.setSticky("ew")
 #app.setStretch("both")
 app.addScrolledTextArea("Result")
-app.setTextAreaWidth("Result", 110)
-app.setTextAreaHeight("Result", 22)
+app.setTextAreaWidth("Result", 80)
+app.setTextAreaHeight("Result", 23)
 app.setTextArea("Result", test_string)
 #app.stopLabelFrame()
 app.stopTab() #"Bulbs Details"
@@ -1268,7 +1246,7 @@ app.stopTab() #"Bulbs Details"
 
 #---------------------------------------------------------------------------------------------------------
 app.startTab("Follow Desktop")
-app.startLabelFrame(FOLLOW_DESKTOP, 0, 0)
+#app.startLabelFrame(FOLLOW_DESKTOP, 0, 0)
 #app.setSticky("n")
 modeList = ["-Select Region-      "]
 modeList.append("Whole Screen")
@@ -1276,33 +1254,34 @@ modeList.append("Rectangular Region")
 app.setSticky("w")
 app.addCheckBox(FOLLOW_DESKTOP, 0, 0)
 app.setCheckBoxChangeFunction(FOLLOW_DESKTOP, followDesktopPressed)
-app.addOptionBox(DESKTOP_MODE, modeList, 0, 1)
+#app.setSticky("ew")
+app.addOptionBox(DESKTOP_MODE, modeList, 2, 0)
 app.setOptionBoxChangeFunction(DESKTOP_MODE, modeChanged)
 app.setOptionBox(DESKTOP_MODE, "Whole Screen", callFunction=False)
-app.addLabelEntry(TRANSITION_TIME, 0, 2)
+app.addLabelEntry(TRANSITION_TIME, 2, 1)
 app.setEntryWidth(TRANSITION_TIME, 6)
 app.setEntry(TRANSITION_TIME, TRANSITION_TIME_DEFAULT)
 #app.startLabelFrame("Region Color", 0, 3)
-app.addLabel(REGION_COLOR, "", 1, 0, colspan=5)
+app.addCheckBox(MAX_SATURATION, 3, 0)
+app.addCheckBox(MAX_BRIGHTNESS, 3, 1)
+app.setCheckBoxChangeFunction(MAX_SATURATION, maxPressed)
+app.setCheckBoxChangeFunction(MAX_BRIGHTNESS, maxPressed)
+app.addCheckBox("Evening Mode",3,2)
+#app.hideCheckBox(MAX_SATURATION)
+#app.hideCheckBox(MAX_BRIGHTNESS)
+app.addLabel(REGION_COLOR, "", 4, 0, colspan=5)
 app.setLabel(REGION_COLOR, " Desktop Region's Dominant Color")
 app.setLabelHeight(REGION_COLOR, 1)
 app.setLabelBg(REGION_COLOR, "gray")
 app.hideLabel(REGION_COLOR)
-app.setSticky("e")
-app.addCheckBox(MAX_SATURATION, 0, 3)
-app.addCheckBox(MAX_BRIGHTNESS, 0, 4)
-app.setCheckBoxChangeFunction(MAX_SATURATION, maxPressed)
-app.setCheckBoxChangeFunction(MAX_BRIGHTNESS, maxPressed)
-app.addCheckBox("Evening Mode",0,5)
-#app.hideCheckBox(MAX_SATURATION)
-#app.hideCheckBox(MAX_BRIGHTNESS)
+
 
 app.setEntryTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
 app.setLabelTooltip(TRANSITION_TIME, TRANSITION_TIME_TIP)
 app.setCheckBoxTooltip(FOLLOW_DESKTOP, FOLLOW_DESKTOP_TIP)
 app.setOptionBoxTooltip(DESKTOP_MODE, DESKTOP_MODE_TIP)
 
-app.stopLabelFrame() #FOLLOW_DESKTOP
+#app.stopLabelFrame() #FOLLOW_DESKTOP
 app.stopTab() #"Follow Desktop"
 #---------------------------------------------------------------------------------------------------------
 
@@ -1310,7 +1289,7 @@ app.stopTab() #"Follow Desktop"
 #---------------------------------------------------------------------------------------------------------
 app.startTab("WaveForm")
 #app.addLabel("l3", "Tab 3 Label")
-app.startLabelFrame("Waveform", 1, 1, 5, 1)
+#app.startLabelFrame("Waveform", 1, 1, 5, 1)
 #app.setFrameWidth("Waveform",20)
 #app.setSticky("news")
 app.setSticky("w")
@@ -1352,23 +1331,41 @@ app.setSticky("ew")
 app.addButton("Execute", press, 5, 0, colspan=3)
 app.setButtonBg("Execute", "cyan")
 
-app.stopLabelFrame() #"WaveForm"
+#app.stopLabelFrame() #"WaveForm"
 app.stopTab() #"WaveForm"
 #---------------------------------------------------------------------------------------------------------
+app.startTab("Scenes")
 
+#app.startLabelFrame("Scenes", 0, 1)
+app.setSticky("news")
+app.addEntry("Scene 1", 0, 0)
+app.setEntryChangeFunction("Scene 1", SceneNameChanged)
+app.addNamedButton("Save", "Save Scene 1", Scene, 0, 1)
+app.addNamedButton("Restore", "Restore Scene 1", Scene, 0, 2)
+app.addEntry("Scene 2", 1, 0)
+app.setEntryChangeFunction("Scene 2", SceneNameChanged)
+app.addNamedButton("Save", "Save Scene 2", Scene, 1, 1)
+app.addNamedButton("Restore", "Restore Scene 2", Scene, 1, 2)
+app.addEntry("Scene 3", 2, 0)
+app.setEntryChangeFunction("Scene 3", SceneNameChanged)
+app.addNamedButton("Save", "Save Scene 3", Scene, 2, 1)
+app.addNamedButton("Restore", "Restore Scene 3", Scene, 2, 2)
+#app.stopLabelFrame()
+
+app.stopTab() #"Scenes"
 #---------------------------------------------------------------------------------------------------------
 app.startTab(COLOR_CYCLE)
 app.setSticky("w")
 app.addCheckBox(START_COLOR_CYCLE)
 app.setCheckBoxChangeFunction(START_COLOR_CYCLE, ColorCyclePressed)
-app.setSticky("w")
+app.setSticky("ew")
+
+app.startFrame("group")
 
 app.addLabelEntry(CYCLE_INTERVAL, 1, 0); 
 app.setEntryWidth(CYCLE_INTERVAL, 5)
 app.addScale(CYCLE_INTERVAL_SCALE, 1, 1)
 app.setScaleRange(CYCLE_INTERVAL_SCALE, 100, 2000)
-
-
 
 app.addLabelEntry(HUE_DELTA, 2, 0)
 app.setEntryWidth(HUE_DELTA, 5)
@@ -1380,6 +1377,17 @@ app.addLabelEntry(TRANSITION_TIME2, 3, 0)
 app.setEntryWidth(TRANSITION_TIME2, 5)
 app.addScale(TRANSITION_TIME2_SCALE, 3, 1)
 app.setScaleRange(TRANSITION_TIME2_SCALE, 0, 2000)
+app.stopFrame()
+
+app.startLabelFrame("Note", row=5, column=0)
+app.addLabel("note")
+#app.setLabelWidth("note",60)
+#app.setLabelHeight("note",30)
+
+app.setLabel("note","\nRemember to set the Saturation and Brightness of your bulbs \n(i.e. pick a color) before starting the Color Cycle sequence.\nOnly the Hue will be changed.\n")
+
+#app.setLabelAlign("note", "left")
+app.stopLabelFrame()
 
 
 #app.addLabelEntry(CYCLE_SATURATION,)
