@@ -68,7 +68,7 @@ def resource_path(relative_path):
 
     elif (myos == 'Darwin') or (myos == 'Linux') :
         """ Get absolute path to resource, works for dev and for PyInstaller """
-        base_path =  os.path.dirname(os.path.abspath(__file__))
+        base_path =  getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         return os.path.join(base_path, relative_path)
 
 DECIMATE = 1   # skip every DECIMATE number of pixels to speed up calculation
