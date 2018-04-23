@@ -22,6 +22,7 @@ $pip3 install lifxlan
 $pip3 install colour
 $pip3 install configobj
 $pip3 install numpy
+$pip3 install mss
 $pip3 install opencv-python
 $pip3 install scipy
 $pip3 install pillow
