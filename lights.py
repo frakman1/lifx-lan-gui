@@ -43,15 +43,15 @@ def resource_path(relative_path):
         """ Get absolute path to resource, works for dev and for PyInstaller """
         try:
             # PyInstaller creates a temp folder and stores path in _MEIPASS
-            base_path = sys._MEIPASS
-        except Exception:
             base_path = os.path.abspath(".")
+        except Exception:
+            base_path = sys._MEIPASS
         
         return os.path.join(base_path, relative_path)
 
     elif (myos == 'Darwin') or (myos == 'Linux') :
         """ Get absolute path to resource, works for dev and for PyInstaller """
-        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        base_path =  os.path.dirname(os.path.abspath(__file__))
         return os.path.join(base_path, relative_path)
 
 DECIMATE = 1   # skip every DECIMATE number of pixels to speed up calculation
@@ -1428,7 +1428,8 @@ app.stopTabbedFrame()
 
 app.stopLabelFrame()# " "
 
-
+print("Config path:", CONFIG)
+print("path:",os.path.dirname(os.path.abspath(__file__) ))
 if not os.path.exists(CONFIG):
     print("Creating .ini file")
     open(CONFIG, 'w').close()
