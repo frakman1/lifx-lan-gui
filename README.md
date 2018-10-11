@@ -39,7 +39,7 @@ $python3 lights.py
 
 # Supported Platforms
 
-Currently tested on `Windows 7 & 10, 64bit`, `Linux (Ubuntu 14.04.1-32bit)` and `Mac (Sierra)`. 
+Currently tested on `Windows 7 & 10, 64bit`, `Linux (Ubuntu 14.04.1-32bit)` and `Mac (Sierra and Mojave)`. 
 
 
 ### Packaging notes:
