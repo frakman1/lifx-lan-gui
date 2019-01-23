@@ -1,3 +1,5 @@
+<img src="https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg">
+
 # lifx-lan-gui
 A simple LIFX Desktop (Windows, Linux and Mac) app that uses [appJar](https://github.com/jarvisteach/appJar) for the GUI and [lifxlan](https://github.com/mclarkk/lifxlan) for the underlying driver. 
 
