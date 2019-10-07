@@ -850,6 +850,7 @@ def followDesktop():
     global r
     global maxSaturation
     global maxBrightness
+    global bulbs
     screen_width = app.winfo_screenwidth()
     screen_height = app.winfo_screenheight()
     print("screen_width:", screen_width, " screen_height:", screen_height)
@@ -905,9 +906,13 @@ def followDesktop():
             if (maxBrightness) and (True):
                 v = 65535
             bulbHSBK = [h, s, v, k]
+            
+            
             try:
                 if gSelectAll:
-                    lan.set_color_all_lights(bulbHSBK, duration=duration, rapid=True)
+                    #lan.set_color_all_lights(bulbHSBK, duration=duration, rapid=True)
+                    for bulb in bulbs:
+                        bulb.set_color(bulbHSBK, duration=duration, rapid=True)
                 elif selected_bulb:
                     selected_bulb.set_color(bulbHSBK, duration=duration, rapid=True)
                 else:
@@ -1468,7 +1473,7 @@ if not os.path.exists(CONFIG):
     config.write()
 
 
-#print(".ini file exists")
+print(".ini file exists")
 config = ConfigObj(CONFIG)
 print("config:", config)
 if 'maxSaturation' in config:
@@ -1501,8 +1506,8 @@ if 'Scene 2' in config:
     app.setEntry("Scene 2", config["Scene 2"], callFunction=False)
 if 'Scene 3' in config:    
     app.setEntry("Scene 3", config["Scene 3"], callFunction=False)
-#print("config['bulbs']:",config['bulbs'])
-#print("type(config['bulbs']):",type(config['bulbs']))
+print("config['bulbs']:",config['bulbs'])
+print("type(config['bulbs']):",type(config['bulbs']))
 if os.path.exists(PICKLE):
     bulbPickle = pkl.load(open(PICKLE, "rb"))   #this reads the pickle
     #print (bulbPickle)
