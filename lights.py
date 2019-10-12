@@ -97,6 +97,7 @@ CYCLES = "Cycles"
 TRANSITION_TIME = "Transition Time(ms)"
 FOLLOW_DESKTOP = "Start Following Desktop"
 DESKTOP_MODE = "Desktop Mode"
+SELECT_MODE = "Select Mode"
 REGION_COLOR = "regioncolor"
 MAX_SATURATION = "Max Saturation"
 MAX_BRIGHTNESS = "Max Brightness"
@@ -412,11 +413,15 @@ def updateHSB(name):
     #app.setEntry("colCode", RGB)
 
 def updateBulbs(bulbHSBK):
+    global bulbs
+    global selected_bulb
     try:
         
-        if gSelectAll:
+        if (selected_bulb == "Select All Bulbs In LAN"):
             lan.set_color_all_lights(bulbHSBK, duration=0, rapid=False)
-
+        elif (selected_bulb == "Select All Recalled Bulbs"):
+            for bulb in bulbs:
+                bulb.set_color(bulbHSBK, duration=0, rapid=False)
         elif selected_bulb:
             #print("sending color",hsv)
             selected_bulb.set_color(bulbHSBK, duration=0, rapid=False)
@@ -424,8 +429,8 @@ def updateBulbs(bulbHSBK):
     except Exception as e:
         print ("Ignoring error: ", str(e))
     
-
-def selectAllPressed (name):
+'''
+def selectTypeChanged(name):
     global bulbs
     if len(bulbs) < 1:
         app.errorBox("Error", "Error. No bulbs were found yet. Please click the 'Find Bulbs' button and try again.")
@@ -433,8 +438,10 @@ def selectAllPressed (name):
         return
 
     global gSelectAll
-    gSelectAll = app.getCheckBox("Select All")
+    gSelectAll = (app.getOptionBox(SELECT_MODE)) ;print("gSelectAll: ",gSelectAll)
+    #app.getCheckBox("Select All")
     #print("gSelectAll:",gSelectAll)
+'''
 
 def expectedPressed (name):
     global gExpectedBulbs
@@ -516,7 +523,10 @@ def listChanged():
 
         return
 
-
+    if ((selected == "Select All Bulbs In LAN") or (selected == "Select All Recalled Bulbs")):
+        selected_bulb = selected
+        return
+        
     app.clearTextArea("Result")
     app.setTextArea("Result", details)
 
@@ -554,6 +564,9 @@ def finder():
     global config
     bulbList.clear()
     bulbList.append("-Select Bulb-")
+    bulbList.append("Select All Bulbs In LAN")
+    bulbList.append("Select All Recalled Bulbs")
+    
     try:
         global bulbs
         #print("finder().gExpectedBulbs:",gExpectedBulbs)
@@ -696,9 +709,11 @@ def press(name):
         #print("cycles:",cycles)
         #print("duty_cycle:",duty_cycle)
 
-        if gSelectAll:
+        if (selected_bulb == "Select All Bulbs In LAN"):
             lan.set_waveform_all_lights(is_transient, bulbHSBK, period, cycles, duty_cycle, waveform, [1])
-
+        elif (selected_bulb == "Select All Recalled Bulbs"):
+            for bulb in bulbs:
+                bulb.set_waveform(is_transient, bulbHSBK, period, cycles, duty_cycle, waveform)
         elif selected_bulb:
             #print("sending color",hsv)
             selected_bulb.set_waveform(is_transient, bulbHSBK, period, cycles, duty_cycle, waveform)
@@ -726,8 +741,11 @@ def press(name):
         
         #print ("bulbHSBK:",bulbHSBK)
         updateBulbs(bulbHSBK)
-        if gSelectAll:
+        if (selected_bulb == "Select All Bulbs In LAN"):
             lan.set_color_all_lights(bulbHSBK, duration=0, rapid=False)
+        elif (selected_bulb == "Select All Recalled Bulbs"):    
+            for bulb in bulbs:
+                bulb.set_color(bulbHSBK, duration=0, rapid=False)
         elif selected_bulb:
             #print("sending color",hsv)
             selected_bulb.set_color(bulbHSBK, duration=0, rapid=False)
@@ -909,10 +927,11 @@ def followDesktop():
             
             
             try:
-                if gSelectAll:
-                    #lan.set_color_all_lights(bulbHSBK, duration=duration, rapid=True)
+                if (selected_bulb == "Select All Recalled Bulbs"):
                     for bulb in bulbs:
                         bulb.set_color(bulbHSBK, duration=duration, rapid=True)
+                elif (selected_bulb == "Select All Bulbs In LAN"):
+                    lan.set_color_all_lights(bulbHSBK, duration=duration, rapid=True)
                 elif selected_bulb:
                     selected_bulb.set_color(bulbHSBK, duration=duration, rapid=True)
                 else:
@@ -1012,6 +1031,7 @@ def ColorCycle():
     global gCycleBrightness
     global gCycleKelvin
     global original_colors
+    global bulbs
 
     
     #print("is_cycle:", is_cycle, " gCycleInterval:", gCycleInterval, "gCycleDelta:", gCycleDelta, "gCycleHue:", gCycleHue, "originalColors:", original_colors)
@@ -1020,9 +1040,9 @@ def ColorCycle():
         #rgb1 = hsv_to_rgb(gCycleHue/65535, gCycleSaturation/65535, gCycleBrightness/65535);#print("rgb1:",rgb1)
         #c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
         
-        
+        #TODO Handle the "Select All Recalled Bulbs" case
         try:
-            if gSelectAll:
+            if (selected_bulb == "Select All Bulbs In LAN"):
                 #lan.set_color_all_lights(bulbHSBK,gTransitionTime, rapid=True)
                 #print("------------------------------------------------")
                 for light in original_colors:
@@ -1145,8 +1165,18 @@ app.setLabelTooltip("Expected Bulbs", EXPECTED_TIP)
 
 app.addLabel("lbl2", " ", 1, 0)
 app.setLabelBg("lbl2", "white")
-app.addNamedCheckBox("Select All Bulbs", "Select All", 1, 2)
-app.setCheckBoxChangeFunction("Select All", selectAllPressed)
+
+
+#app.addNamedCheckBox("Select All Bulbs", "Select All", 1, 2)
+#app.setCheckBoxChangeFunction("Select All", selectAllPressed)
+'''
+selectList = ["-Select All or All Recalled-      "]
+selectList.append("Select All Bulbs In LAN")
+selectList.append("Select All Recalled Bulbs")
+app.addOptionBox(SELECT_MODE, selectList, 1, 2)
+app.setOptionBoxChangeFunction(SELECT_MODE, selectTypeChanged)
+app.setOptionBox(SELECT_MODE, "Select All Bulbs In LAN", callFunction=False)
+'''
 
 app.addOptionBox("LIFX Bulbs", bulbList, 1, 1)
 app.setOptionBoxChangeFunction("LIFX Bulbs", listChanged)
@@ -1506,13 +1536,16 @@ if 'Scene 2' in config:
     app.setEntry("Scene 2", config["Scene 2"], callFunction=False)
 if 'Scene 3' in config:    
     app.setEntry("Scene 3", config["Scene 3"], callFunction=False)
-print("config['bulbs']:",config['bulbs'])
-print("type(config['bulbs']):",type(config['bulbs']))
+#print("config['bulbs']:",config['bulbs'])
+#print("type(config['bulbs']):",type(config['bulbs']))
 if os.path.exists(PICKLE):
     bulbPickle = pkl.load(open(PICKLE, "rb"))   #this reads the pickle
     #print (bulbPickle)
     bulbList.clear()
     bulbList.append("-Select Bulb-")
+    bulbList.append("Select All Bulbs In LAN")
+    bulbList.append("Select All Recalled Bulbs")
+
 
     for i, bulb in enumerate(bulbPickle):
         #print ("mac:",bulb['mac']);
@@ -1527,7 +1560,7 @@ if os.path.exists(PICKLE):
         app.setLabelBg("lbl2", mygreen)
         app.hideLabel("f1")
         app.setLabel("lbl2", "Recalled " + str(len(bulbs)) + " bulbs")
-        app.setCheckBox("Select All")
+        #app.setCheckBox("Select All")
 
 
 #light = Light("12:34:56:78:9a:bc", "192.168.1.42")
