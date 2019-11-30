@@ -1070,7 +1070,7 @@ def ColorCycle():
                         bulbHSBK = [newHue, original_colors[light][1], original_colors[light][2], original_colors[light][3]]
                         #print (bulbHSBK)
                         light.set_color(bulbHSBK, gTransitionTime, rapid=True)
-                        #print("------------------------------------------------")
+                        
                 
             elif selected_bulb:
                 gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
