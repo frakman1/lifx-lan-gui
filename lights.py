@@ -26,7 +26,9 @@ import numpy as np
 import cv2
 from scipy.stats import itemfreq
 from mss import mss
+import inspect
 
+   
 myos = system()
 if (myos == 'Windows') or (myos == 'Darwin'):
     from PIL import ImageGrab
@@ -38,6 +40,11 @@ if (myos == 'Windows'):
 elif (myos == 'Darwin') or (myos == 'Linux') :
     mygreen = 'green'
 
+    
+def lineno():
+    """Returns the current line number in our program."""
+    return inspect.currentframe().f_back.f_lineno
+    
 def abs_resource_path(relative_path):
     if (myos == 'Windows'):
         """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -97,6 +104,7 @@ CYCLES = "Cycles"
 TRANSITION_TIME = "Transition Time(ms)"
 FOLLOW_DESKTOP = "Start Following Desktop"
 DESKTOP_MODE = "Desktop Mode"
+SELECT_MODE = "Select Mode"
 REGION_COLOR = "regioncolor"
 MAX_SATURATION = "Max Saturation"
 MAX_BRIGHTNESS = "Max Brightness"
@@ -276,7 +284,7 @@ def Scene(name):
             for light in original_powers3:
                 light.set_power(original_powers3[light])
     except Exception as e:
-        print ("Ignoring error: ", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
         app.errorBox("Error", str(e) + "\n\n Scene Operation failed. This feature is buggy and only works about 50% of the time. Sometimes, you can still save and restore a scene despite this error. If you keep getting this error and can not perform a 'Restore', try restarting the app then try again.")
         return
 
@@ -412,20 +420,24 @@ def updateHSB(name):
     #app.setEntry("colCode", RGB)
 
 def updateBulbs(bulbHSBK):
+    global bulbs
+    global selected_bulb
     try:
         
-        if gSelectAll:
+        if (selected_bulb == "Select All Bulbs In LAN"):
             lan.set_color_all_lights(bulbHSBK, duration=0, rapid=False)
-
+        elif (selected_bulb == "Select All Recalled Bulbs"):
+            for bulb in bulbs:
+                bulb.set_color(bulbHSBK, duration=0, rapid=False)
         elif selected_bulb:
             #print("sending color",hsv)
             selected_bulb.set_color(bulbHSBK, duration=0, rapid=False)
     
     except Exception as e:
-        print ("Ignoring error: ", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
     
-
-def selectAllPressed (name):
+'''
+def selectTypeChanged(name):
     global bulbs
     if len(bulbs) < 1:
         app.errorBox("Error", "Error. No bulbs were found yet. Please click the 'Find Bulbs' button and try again.")
@@ -433,8 +445,10 @@ def selectAllPressed (name):
         return
 
     global gSelectAll
-    gSelectAll = app.getCheckBox("Select All")
+    gSelectAll = (app.getOptionBox(SELECT_MODE)) ;print("gSelectAll: ",gSelectAll)
+    #app.getCheckBox("Select All")
     #print("gSelectAll:",gSelectAll)
+'''
 
 def expectedPressed (name):
     global gExpectedBulbs
@@ -509,14 +523,17 @@ def listChanged():
                 #print("breaking")
                 break
     except Exception as e:
-        print ("Ignoring error: ", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
         app.errorBox("Error", str(e))
         app.clearTextArea("Result");
         app.setTextArea("Result", str(e))
 
         return
 
-
+    if ((selected == "Select All Bulbs In LAN") or (selected == "Select All Recalled Bulbs")):
+        selected_bulb = selected
+        return
+        
     app.clearTextArea("Result")
     app.setTextArea("Result", details)
 
@@ -528,7 +545,7 @@ def listChanged():
             #print ("BULB is OFF ")
             app.setButtonImage("Light", resource_path("bulb_off.gif"))
     except Exception as e:
-        print ("Ignoring error:", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
 
     app.setButton ( "Light", "Toggle " + selected )
     app.showButton("Light")
@@ -554,6 +571,9 @@ def finder():
     global config
     bulbList.clear()
     bulbList.append("-Select Bulb-")
+    bulbList.append("Select All Bulbs In LAN")
+    bulbList.append("Select All Recalled Bulbs")
+    
     try:
         global bulbs
         #print("finder().gExpectedBulbs:",gExpectedBulbs)
@@ -596,7 +616,7 @@ def finder():
 
 
     except Exception as e:
-        print ("Ignoring error:", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
         app.setLabelBg("lbl2", "gray")
         app.setLabel("lbl2", "Found 0 bulbs")
         app.errorBox("Error", str(e) + "\n\nPlease try again. If you keep getting this error, check/toggle your WiFi, ensure that 'Expected Bulbs' is either 0 or the number of bulbs you have and finally, try restarting the app")
@@ -696,9 +716,11 @@ def press(name):
         #print("cycles:",cycles)
         #print("duty_cycle:",duty_cycle)
 
-        if gSelectAll:
+        if (selected_bulb == "Select All Bulbs In LAN"):
             lan.set_waveform_all_lights(is_transient, bulbHSBK, period, cycles, duty_cycle, waveform, [1])
-
+        elif (selected_bulb == "Select All Recalled Bulbs"):
+            for bulb in bulbs:
+                bulb.set_waveform(is_transient, bulbHSBK, period, cycles, duty_cycle, waveform)
         elif selected_bulb:
             #print("sending color",hsv)
             selected_bulb.set_waveform(is_transient, bulbHSBK, period, cycles, duty_cycle, waveform)
@@ -726,8 +748,11 @@ def press(name):
         
         #print ("bulbHSBK:",bulbHSBK)
         updateBulbs(bulbHSBK)
-        if gSelectAll:
+        if (selected_bulb == "Select All Bulbs In LAN"):
             lan.set_color_all_lights(bulbHSBK, duration=0, rapid=False)
+        elif (selected_bulb == "Select All Recalled Bulbs"):    
+            for bulb in bulbs:
+                bulb.set_color(bulbHSBK, duration=0, rapid=False)
         elif selected_bulb:
             #print("sending color",hsv)
             selected_bulb.set_color(bulbHSBK, duration=0, rapid=False)
@@ -744,7 +769,7 @@ def press(name):
         try:
             onOff = selected_bulb.power_level;
         except Exception as e:
-            print ("Ignoring error:", str(e))
+            print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
             app.errorBox("Error", str(e) + "\n\nTry selecting a bulb from the list first.")
             return
 
@@ -755,7 +780,7 @@ def press(name):
             try:
                 app.setButtonImage("Light", resource_path("bulb_on.gif"));#print("PowerOn");
             except Exception as e:
-                print ("Ignoring error:", str(e))
+                print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
             details = details.replace("Power: Off", "Power: On");
             app.clearTextArea("Result")
             app.setTextArea("Result", details)
@@ -765,7 +790,7 @@ def press(name):
             try:
                 app.setButtonImage("Light", resource_path("bulb_off.gif"));#print("PowerOff");
             except Exception as e:
-                print ("Ignoring error:", str(e))
+                print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
             details = details.replace("Power: On", "Power: Off"); #print("details:\n",details)
             app.clearTextArea("Result")
             app.setTextArea("Result", details)
@@ -815,7 +840,7 @@ def rainbow_press(name):
         for light in original_powers:
             light.set_power(original_powers[light])
     except Exception as e:
-        print ("Ignoring error:", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
 
 def rainbow(lan, duration_secs=0.5, smooth=False):
     colors = [RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE, PINK]
@@ -850,6 +875,7 @@ def followDesktop():
     global r
     global maxSaturation
     global maxBrightness
+    global bulbs
     screen_width = app.winfo_screenwidth()
     screen_height = app.winfo_screenheight()
     print("screen_width:", screen_width, " screen_height:", screen_height)
@@ -883,7 +909,7 @@ def followDesktop():
             sct_img = sct.grab(box)
             image = Image.frombytes('RGB', sct_img.size, sct_img.rgb)
         except Exception as e:
-            print ("Ignoring error:", str(e))
+            print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
 
         try:
             # downsample to 1/10th and calculate average RGB color
@@ -905,8 +931,13 @@ def followDesktop():
             if (maxBrightness) and (True):
                 v = 65535
             bulbHSBK = [h, s, v, k]
+            
+            
             try:
-                if gSelectAll:
+                if (selected_bulb == "Select All Recalled Bulbs"):
+                    for bulb in bulbs:
+                        bulb.set_color(bulbHSBK, duration=duration, rapid=True)
+                elif (selected_bulb == "Select All Bulbs In LAN"):
                     lan.set_color_all_lights(bulbHSBK, duration=duration, rapid=True)
                 elif selected_bulb:
                     selected_bulb.set_color(bulbHSBK, duration=duration, rapid=True)
@@ -916,9 +947,9 @@ def followDesktop():
                     is_follow = False
                     return
             except Exception as e:
-                print ("Ignoring error: ", str(e))
+                print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
         except Exception as e:
-            print("Ignoring error: ", str(e))
+            print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
 
         # rate limit to prevent from spamming bulbs
         # the theoretical max speed that the bulbs can handle is one packet
@@ -1007,6 +1038,7 @@ def ColorCycle():
     global gCycleBrightness
     global gCycleKelvin
     global original_colors
+    global bulbs
 
     
     #print("is_cycle:", is_cycle, " gCycleInterval:", gCycleInterval, "gCycleDelta:", gCycleDelta, "gCycleHue:", gCycleHue, "originalColors:", original_colors)
@@ -1015,9 +1047,9 @@ def ColorCycle():
         #rgb1 = hsv_to_rgb(gCycleHue/65535, gCycleSaturation/65535, gCycleBrightness/65535);#print("rgb1:",rgb1)
         #c = Color(rgb=(rgb1[0], rgb1[1], rgb1[2]))
         
-        
+        #TODO Handle the "Select All Recalled Bulbs" case
         try:
-            if gSelectAll:
+            if (selected_bulb == "Select All Bulbs In LAN"):
                 #lan.set_color_all_lights(bulbHSBK,gTransitionTime, rapid=True)
                 #print("------------------------------------------------")
                 for light in original_colors:
@@ -1029,6 +1061,16 @@ def ColorCycle():
                     light.set_color(bulbHSBK, gTransitionTime, rapid=True)
                     #print("------------------------------------------------")
                     
+            elif (selected_bulb == "Select All Recalled Bulbs"):
+                for bulb in bulbs:
+                    for light in original_colors:
+                        newHue = (int(original_colors[light][0]) + int(gCycleDelta)) % 65535
+                        #print("newHue:",newHue)
+                        original_colors[light] = (newHue, original_colors[light][1], original_colors[light][2], original_colors[light][3])
+                        bulbHSBK = [newHue, original_colors[light][1], original_colors[light][2], original_colors[light][3]]
+                        #print (bulbHSBK)
+                        light.set_color(bulbHSBK, gTransitionTime, rapid=True)
+                        #print("------------------------------------------------")
                 
             elif selected_bulb:
                 gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
@@ -1044,7 +1086,7 @@ def ColorCycle():
                 is_follow = False
                 return
         except Exception as e:
-            print ("Ignoring error: ", str(e))
+            print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
 
         #Update the GUI the appJar way
         #app.queueFunction(app.setLabelBg, CYCLE_COLOR, c.hex_l)
@@ -1100,7 +1142,7 @@ def ColorCyclePressed(name):
         #gCycleSaturation = int(app.getEntry(CYCLE_SATURATION))%65536
         #print( "type: ", type(original_colors))
     except Exception as e:
-        print ("Ignoring error: ", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
     
     #print("ColorCyclePressed()")
 
@@ -1140,8 +1182,18 @@ app.setLabelTooltip("Expected Bulbs", EXPECTED_TIP)
 
 app.addLabel("lbl2", " ", 1, 0)
 app.setLabelBg("lbl2", "white")
-app.addNamedCheckBox("Select All Bulbs", "Select All", 1, 2)
-app.setCheckBoxChangeFunction("Select All", selectAllPressed)
+
+
+#app.addNamedCheckBox("Select All Bulbs", "Select All", 1, 2)
+#app.setCheckBoxChangeFunction("Select All", selectAllPressed)
+'''
+selectList = ["-Select All or All Recalled-      "]
+selectList.append("Select All Bulbs In LAN")
+selectList.append("Select All Recalled Bulbs")
+app.addOptionBox(SELECT_MODE, selectList, 1, 2)
+app.setOptionBoxChangeFunction(SELECT_MODE, selectTypeChanged)
+app.setOptionBox(SELECT_MODE, "Select All Bulbs In LAN", callFunction=False)
+'''
 
 app.addOptionBox("LIFX Bulbs", bulbList, 1, 1)
 app.setOptionBoxChangeFunction("LIFX Bulbs", listChanged)
@@ -1149,7 +1201,7 @@ app.setSticky("n")
 try:
     app.addImageButton("Light", press, resource_path("bulb_off.gif"), 2, 2)
 except Exception as e:
-    print ("Ignoring error:", str(e))
+    print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
     #app.errorBox("Error", str(e)+"\n\nTry selecting a bulb from the list first.")
     #return
 app.setButton( "Light", "Toggle Selected" )
@@ -1468,7 +1520,7 @@ if not os.path.exists(CONFIG):
     config.write()
 
 
-#print(".ini file exists")
+print(".ini file exists")
 config = ConfigObj(CONFIG)
 print("config:", config)
 if 'maxSaturation' in config:
@@ -1508,6 +1560,9 @@ if os.path.exists(PICKLE):
     #print (bulbPickle)
     bulbList.clear()
     bulbList.append("-Select Bulb-")
+    bulbList.append("Select All Bulbs In LAN")
+    bulbList.append("Select All Recalled Bulbs")
+
 
     for i, bulb in enumerate(bulbPickle):
         #print ("mac:",bulb['mac']);
@@ -1522,11 +1577,12 @@ if os.path.exists(PICKLE):
         app.setLabelBg("lbl2", mygreen)
         app.hideLabel("f1")
         app.setLabel("lbl2", "Recalled " + str(len(bulbs)) + " bulbs")
-        app.setCheckBox("Select All")
+        #app.setCheckBox("Select All")
 
 
 #light = Light("12:34:56:78:9a:bc", "192.168.1.42")
 #print("bulbs:",bulbs)
 lan = lifxlan.LifxLAN()
+print ("Line:{}".format(lineno()))
 
 app.go()
