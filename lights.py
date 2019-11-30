@@ -26,7 +26,9 @@ import numpy as np
 import cv2
 from scipy.stats import itemfreq
 from mss import mss
+import inspect
 
+   
 myos = system()
 if (myos == 'Windows') or (myos == 'Darwin'):
     from PIL import ImageGrab
@@ -38,6 +40,11 @@ if (myos == 'Windows'):
 elif (myos == 'Darwin') or (myos == 'Linux') :
     mygreen = 'green'
 
+    
+def lineno():
+    """Returns the current line number in our program."""
+    return inspect.currentframe().f_back.f_lineno
+    
 def abs_resource_path(relative_path):
     if (myos == 'Windows'):
         """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -277,7 +284,7 @@ def Scene(name):
             for light in original_powers3:
                 light.set_power(original_powers3[light])
     except Exception as e:
-        print ("Ignoring error: ", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
         app.errorBox("Error", str(e) + "\n\n Scene Operation failed. This feature is buggy and only works about 50% of the time. Sometimes, you can still save and restore a scene despite this error. If you keep getting this error and can not perform a 'Restore', try restarting the app then try again.")
         return
 
@@ -427,7 +434,7 @@ def updateBulbs(bulbHSBK):
             selected_bulb.set_color(bulbHSBK, duration=0, rapid=False)
     
     except Exception as e:
-        print ("Ignoring error: ", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
     
 '''
 def selectTypeChanged(name):
@@ -516,7 +523,7 @@ def listChanged():
                 #print("breaking")
                 break
     except Exception as e:
-        print ("Ignoring error: ", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
         app.errorBox("Error", str(e))
         app.clearTextArea("Result");
         app.setTextArea("Result", str(e))
@@ -538,7 +545,7 @@ def listChanged():
             #print ("BULB is OFF ")
             app.setButtonImage("Light", resource_path("bulb_off.gif"))
     except Exception as e:
-        print ("Ignoring error:", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
 
     app.setButton ( "Light", "Toggle " + selected )
     app.showButton("Light")
@@ -609,7 +616,7 @@ def finder():
 
 
     except Exception as e:
-        print ("Ignoring error:", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
         app.setLabelBg("lbl2", "gray")
         app.setLabel("lbl2", "Found 0 bulbs")
         app.errorBox("Error", str(e) + "\n\nPlease try again. If you keep getting this error, check/toggle your WiFi, ensure that 'Expected Bulbs' is either 0 or the number of bulbs you have and finally, try restarting the app")
@@ -762,7 +769,7 @@ def press(name):
         try:
             onOff = selected_bulb.power_level;
         except Exception as e:
-            print ("Ignoring error:", str(e))
+            print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
             app.errorBox("Error", str(e) + "\n\nTry selecting a bulb from the list first.")
             return
 
@@ -773,7 +780,7 @@ def press(name):
             try:
                 app.setButtonImage("Light", resource_path("bulb_on.gif"));#print("PowerOn");
             except Exception as e:
-                print ("Ignoring error:", str(e))
+                print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
             details = details.replace("Power: Off", "Power: On");
             app.clearTextArea("Result")
             app.setTextArea("Result", details)
@@ -783,7 +790,7 @@ def press(name):
             try:
                 app.setButtonImage("Light", resource_path("bulb_off.gif"));#print("PowerOff");
             except Exception as e:
-                print ("Ignoring error:", str(e))
+                print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
             details = details.replace("Power: On", "Power: Off"); #print("details:\n",details)
             app.clearTextArea("Result")
             app.setTextArea("Result", details)
@@ -833,7 +840,7 @@ def rainbow_press(name):
         for light in original_powers:
             light.set_power(original_powers[light])
     except Exception as e:
-        print ("Ignoring error:", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
 
 def rainbow(lan, duration_secs=0.5, smooth=False):
     colors = [RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE, PINK]
@@ -902,7 +909,7 @@ def followDesktop():
             sct_img = sct.grab(box)
             image = Image.frombytes('RGB', sct_img.size, sct_img.rgb)
         except Exception as e:
-            print ("Ignoring error:", str(e))
+            print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
 
         try:
             # downsample to 1/10th and calculate average RGB color
@@ -940,9 +947,9 @@ def followDesktop():
                     is_follow = False
                     return
             except Exception as e:
-                print ("Ignoring error: ", str(e))
+                print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
         except Exception as e:
-            print("Ignoring error: ", str(e))
+            print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
 
         # rate limit to prevent from spamming bulbs
         # the theoretical max speed that the bulbs can handle is one packet
@@ -1054,6 +1061,16 @@ def ColorCycle():
                     light.set_color(bulbHSBK, gTransitionTime, rapid=True)
                     #print("------------------------------------------------")
                     
+            elif (selected_bulb == "Select All Recalled Bulbs"):
+                for bulb in bulbs:
+                    for light in original_colors:
+                        newHue = (int(original_colors[light][0]) + int(gCycleDelta)) % 65535
+                        #print("newHue:",newHue)
+                        original_colors[light] = (newHue, original_colors[light][1], original_colors[light][2], original_colors[light][3])
+                        bulbHSBK = [newHue, original_colors[light][1], original_colors[light][2], original_colors[light][3]]
+                        #print (bulbHSBK)
+                        light.set_color(bulbHSBK, gTransitionTime, rapid=True)
+                        
                 
             elif selected_bulb:
                 gCycleHue = (int(gCycleHue) + int(gCycleDelta)) % 65535
@@ -1069,7 +1086,7 @@ def ColorCycle():
                 is_follow = False
                 return
         except Exception as e:
-            print ("Ignoring error: ", str(e))
+            print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
 
         #Update the GUI the appJar way
         #app.queueFunction(app.setLabelBg, CYCLE_COLOR, c.hex_l)
@@ -1125,7 +1142,7 @@ def ColorCyclePressed(name):
         #gCycleSaturation = int(app.getEntry(CYCLE_SATURATION))%65536
         #print( "type: ", type(original_colors))
     except Exception as e:
-        print ("Ignoring error: ", str(e))
+        print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
     
     #print("ColorCyclePressed()")
 
@@ -1184,7 +1201,7 @@ app.setSticky("n")
 try:
     app.addImageButton("Light", press, resource_path("bulb_off.gif"), 2, 2)
 except Exception as e:
-    print ("Ignoring error:", str(e))
+    print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
     #app.errorBox("Error", str(e)+"\n\nTry selecting a bulb from the list first.")
     #return
 app.setButton( "Light", "Toggle Selected" )
@@ -1566,5 +1583,6 @@ if os.path.exists(PICKLE):
 #light = Light("12:34:56:78:9a:bc", "192.168.1.42")
 #print("bulbs:",bulbs)
 lan = lifxlan.LifxLAN()
+
 
 app.go()
