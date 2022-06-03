@@ -10,7 +10,7 @@ import os
 import time
 import binascii
 import lifxlan
-import colorsys
+#import colorsys
 from colour import Color
 import math
 import sys
@@ -434,6 +434,7 @@ def updateBulbs(bulbHSBK):
             selected_bulb.set_color(bulbHSBK, duration=0, rapid=False)
     
     except Exception as e:
+        #print (bulb)
         print ("Line:{}. Ignoring error:{}".format(lineno(),str(e)))
     
 '''
@@ -509,6 +510,7 @@ def listChanged():
     app.clearTextArea("Result");  # TODO. Put this in another thread
     app.setTextArea("Result", "Loading bulb details")  # TODO. Put this in another thread
     selected = (app.getOptionBox("LIFX Bulbs"))#;print("selected: ",selected)
+
     global bulbs
     global selected_bulb
     global details
@@ -531,6 +533,7 @@ def listChanged():
         return
 
     if ((selected == "Select All Bulbs In LAN") or (selected == "Select All Recalled Bulbs")):
+        app.clearTextArea("Result");
         selected_bulb = selected
         return
         
@@ -589,10 +592,8 @@ def finder():
         else:
             app.setLabelBg("lbl2", mygreen)
             app.hideLabel("f1")
-
+        print(bulbs)
         app.setLabel("lbl2", "Found " + str(len(bulbs)) + " bulbs")
-        app.setCheckBox("Select All")
-        #app.setSpinBox("Expected Bulbs", str(len(bulbs)))
         del lifxList[:]
         for bulb in bulbs:
             #print(".get_label()",bulb.get_label()) # this gets the actual label
@@ -936,6 +937,7 @@ def followDesktop():
             try:
                 if (selected_bulb == "Select All Recalled Bulbs"):
                     for bulb in bulbs:
+                        #print("bulb:{}".format(bulb))
                         bulb.set_color(bulbHSBK, duration=duration, rapid=True)
                 elif (selected_bulb == "Select All Bulbs In LAN"):
                     lan.set_color_all_lights(bulbHSBK, duration=duration, rapid=True)
@@ -986,10 +988,9 @@ def followDesktopPressed(name):
             app.setTransparency(0)
             app.infoBox("Select Region", "A new window entitled \"Screenshot\" will pop up. Drag a rectangle around the region of interest and press ENTER . This region's dominant color will be sent to the bulbs to match. To Cancel, press c .", parent=None)
             myos = system()
-            image = ImageGrab.grab()
             if (myos == 'Linux') or (myos == 'Darwin'):
                 print("Mac OS detected.")
-                open_cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                open_cv_image = np.array(ImageGrab.grab().convert('RGB'))
             elif (myos == 'Windows'):
                 print("Windows OS detected.")
                 open_cv_image = np.array(image)
@@ -998,17 +999,18 @@ def followDesktopPressed(name):
             im = open_cv_image[:,:,::-1].copy()
 
             if (myos == 'Linux') or (myos == 'Darwin'):
-                screen_width = app.winfo_screenwidth()
-                screen_height = app.winfo_screenheight()
-                im = cv2.resize(im, (int(screen_width * 0.9), int(screen_height * 0.9)))
-                cv2.namedWindow("Screenshot", cv2.WINDOW_AUTOSIZE)
-                cv2.moveWindow("Screenshot", 0, 0)
-                cv2.imshow("Screenshot", im)
+                screen_width = app.winfo_screenwidth(); print(screen_width)
+                screen_height = app.winfo_screenheight(); print(screen_height)
+                im = cv2.resize(im, (int(screen_width * 0.9), int(screen_height * 0.9))); print("resized")
+
+                cv2.namedWindow("Screenshot", cv2.WINDOW_AUTOSIZE); print("named")
+                cv2.moveWindow("Screenshot", 0, 0); print("moved")
+                cv2.imshow("Screenshot", im); print("imshowed")
+
             elif (myos == 'Windows'):
                 cv2.namedWindow("Screenshot", cv2.WINDOW_NORMAL)
 
             r = cv2.selectROI("Screenshot", im, False)
-            #cv2.waitKey()
             print ("r type:", type(r))
             print("r is", r)
             if not any(r):
@@ -1018,9 +1020,9 @@ def followDesktopPressed(name):
                 is_follow = False
                 app.setTransparency(1)
                 return
-            #cv2.waitKey(0)
             cv2.destroyAllWindows()
             app.setTransparency(1)
+
 
         app.thread(followDesktop)
 
@@ -1098,7 +1100,6 @@ def ColorCycle():
 
         
 def ColorCyclePressed(name):
-    
     global is_cycle
     global gCycleDelta
     global gCycleInterval

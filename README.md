@@ -34,6 +34,19 @@ $pip3 install pillow
 $pip3 install netifaces‑0.10.6‑cp36‑cp36m‑win_amd64.whl
 ```
 
+### 2022 Update
+Newer versions of Python appear to break this. To use python 3.6.5 again, I had to use something like this using pyenv
+
+```bash
+brew install pyenv
+pyenv local 3.6.5
+~/.pyenv/shims/pip3 install --upgrade pip
+~/.pyenv/shims/pip3 install appJar lifxlan colour configobj numpy mss scipy pillow
+~/.pyenv/shims/pip3 install git+https://github.com/opencv/opencv-python
+~/.pyenv/shims/python3 lights.py
+```
+
+
 # Run Instructions
 ```bash
 $python3 lights.py
