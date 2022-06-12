@@ -58,8 +58,8 @@ def abs_resource_path(relative_path):
 
     elif (myos == 'Darwin') or (myos == 'Linux') :
         """ Get absolute path to resource, works for dev and for PyInstaller """
-        base_path =  os.path.dirname(os.path.abspath(__file__))
-        return os.path.join(base_path, relative_path)
+        #base_path =  os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(os.getenv("HOME"), relative_path)
    	
 	
 def resource_path(relative_path):
@@ -1558,7 +1558,7 @@ if 'Scene 3' in config:
 #print("type(config['bulbs']):",type(config['bulbs']))
 if os.path.exists(PICKLE):
     bulbPickle = pkl.load(open(PICKLE, "rb"))   #this reads the pickle
-    #print (bulbPickle)
+    print ("bulbPickle: ",bulbPickle)
     bulbList.clear()
     bulbList.append("-Select Bulb-")
     bulbList.append("Select All Bulbs In LAN")
